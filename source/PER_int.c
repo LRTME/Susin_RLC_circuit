@@ -17,7 +17,7 @@ float napetost = 0.0;
 // za izracun toka
 long tok_raw = 0;
 long tok_offset = 2048;
-float tok_gain = ???;
+float tok_gain = ????;
 float tok = 0.0;
 
 // vklopno razmerje
