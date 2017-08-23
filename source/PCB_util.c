@@ -1,38 +1,40 @@
 /**************************************************************
 * FILE:         PCB_util.c 
 * DESCRIPTION:  PCB initialization & Support Functions
-* VERSION:      1.0
 * AUTHOR:       Mitja Nemec
+*
 **************************************************************/
 #include "PCB_util.h"
 
 /**************************************************************
-* Funckija ki prizge LED diodo 1
+* turn the LED on control stick on
 **************************************************************/
-void PCB_LED_on(void)
+#pragma CODE_SECTION(PCB_LEDstick_on, "ramfuncs");
+void PCB_LEDstick_on(void)
 {
-	GpioDataRegs.GPBSET.bit.GPIO34 = 1;
+    GpioDataRegs.GPBSET.bit.GPIO34 = 1;
 }
 
 /**************************************************************
-* Funckija ki ugasne LED diodo 1
+* turn the LED on control stick off
 **************************************************************/
-void PCB_LED_off(void)
+#pragma CODE_SECTION(PCB_LEDstick_off, "ramfuncs");
+void PCB_LEDstick_off(void)
 {
-	GpioDataRegs.GPBCLEAR.bit.GPIO34 = 1;
+    GpioDataRegs.GPBCLEAR.bit.GPIO34 = 1;
 }
 
 /**************************************************************
-* Funckija ki spremeni stanje LED diode
+* toggle the LED on control stick
 **************************************************************/
-void PCB_LED_toggle(void)
+#pragma CODE_SECTION(PCB_LEDstick_toggle, "ramfuncs");
+void PCB_LEDstick_toggle(void)
 {
-	GpioDataRegs.GPBTOGGLE.bit.GPIO34 = 1;
+    GpioDataRegs.GPBTOGGLE.bit.GPIO34 = 1;
 }
 
-
 /**************************************************************
-* Funckija ki vklopi breme
+* turn the load on
 **************************************************************/
 void PCB_load_on(void)
 {
@@ -40,7 +42,7 @@ void PCB_load_on(void)
 }
 
 /**************************************************************
-* Funckija ki izklopi breme
+* turn the load off
 **************************************************************/
 void PCB_load_off(void)
 {
@@ -48,19 +50,19 @@ void PCB_load_off(void)
 }
 
 /**************************************************************
-* Funckija ki inicializira PCB
+* initialize specific GPIO functions
 **************************************************************/
 void PCB_init(void)
 {
     EALLOW;
 
-    /* IZHODI */
-    // LED na sticku
+    /* OUTPUTS */
+    // LED on controlSTICK-u
     GpioCtrlRegs.GPBMUX1.bit.GPIO34 = 0;
     GpioCtrlRegs.GPBDIR.bit.GPIO34 = 1;
     GpioDataRegs.GPBDAT.bit.GPIO34 = 0;
 
-    // BREME
+    // LOAD
     GpioCtrlRegs.GPAMUX1.bit.GPIO1 = 0;
     GpioCtrlRegs.GPADIR.bit.GPIO1 = 1;
     GpioDataRegs.GPADAT.bit.GPIO1 = 0;

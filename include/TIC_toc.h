@@ -1,13 +1,7 @@
 /****************************************************************
 * FILENAME:     TIC_toc.h             
-* DESCRIPTION:  struct declaration and macro definitions
+* DESCRIPTION:  Timer 1 as a stopwatch
 * AUTHOR:       Mitja Nemec
-* START DATE:   8.12.2010
-* VERSION:      1.0
-*
-* CHANGES : 
-* VERSION   DATE        WHO         DETAIL 
-* 1.0       8.12.2010   Mitja Nemec Initial version
 *
 ****************************************************************/
 #ifndef     __TIC_TOC_H__

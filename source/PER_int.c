@@ -2,28 +2,27 @@
 * FILENAME:     PER_int.c
 * DESCRIPTION:  periodic interrupt code
 * AUTHOR:       Mitja Nemec
-* DATE:         16.1.2009
 *
 ****************************************************************/
 #include    "PER_int.h"
 #include    "TIC_toc.h"
 
-// za izracunun napetostni
-long napetost_raw = 0;
-long napetost_offset = 0;
-float napetost_gain = ????;
-float napetost = 0.0;
+// variables required for voltage measurement
+long voltage_raw = 0;
+long voltage_offset = 0;
+float voltage_gain = ??;
+float voltage = 0.0;
 
-// za izracun toka
-long tok_raw = 0;
-long tok_offset = 2048;
-float tok_gain = ????;
-float tok = 0.0;
+// variables required for current measurement
+long current_raw = 0;
+long current_offset = 2048;
+float current_gain = ??;
+float current = 0.0;
 
-// vklopno razmerje
+// duty cycle
 float duty = 0.0;
 
-// generiranje željene vrednosti
+// variables for reference value generation and load toggling
 float ref_counter = 0;
 float ref_counter_prd = SWITCH_FREQ;
 float ref_counter_cmpr = 800;
@@ -34,59 +33,58 @@ float ref_value = 0;
 float ref_value_high = 2.5;
 float ref_value_low = 0.25;
 
-// za kalibracijo preostale napetosti tokovne sonde
+// variables for offset calibration 
 bool    offset_calib = TRUE;
 long     offset_counter = 0;
 float   offset_filter = 0.005;
 
-// za oceno obremenjenosti CPU-ja
+// CPU load estimation
 float   cpu_load  = 0.0;
 long    interrupt_cycles = 0;
 
-/**************************************************************
-* spremenljivke, ki jih potrebujemo za regulator
-**************************************************************/
-float zeljena = 0.0;
-
-
-
-
-
-
-
-// spremenljikva s katero štejemo kolikokrat se je prekinitev predolgo izvajala
+// counter of too long interrupt function executions
 int interrupt_overflow_counter = 0;
 
+// variables for the PID controller
+float reference = 0.0;
+
+
 
 /**************************************************************
-* Prekinitev, ki v kateri se izvaja regulacija
+* interrupt funcion
 **************************************************************/
 #pragma CODE_SECTION(PER_int, "ramfuncs");
 void interrupt PER_int(void)
 {
-    /* lokalne spremenljivke */
-    
-    // najprej povem da sem se odzzval na prekinitev
-    // Spustimo INT zastavico casovnika ePWM1
+    /// local variables
+
+    // acknowledge interrupt within PWM module
     EPwm1Regs.ETCLR.bit.INT = 1;
-    // Spustimo INT zastavico v PIE enoti
+    // acknowledge interrupt within PIE module
     PieCtrlRegs.PIEACK.all = PIEACK_GROUP3;
-    
-    // pozenem stoprico
+
+    // start CPU load stopwatch
     interrupt_cycles = TIC_time;
     TIC_start();
 
-    // izracunam obremenjenost procesorja
-    cpu_load = (float)interrupt_cycles / (CPU_FREQ/SWITCH_FREQ);
+    // get previous CPU load estimate
+    cpu_load = (float)interrupt_cycles * ((float)SWITCH_FREQ/CPU_FREQ);
 
-    // pocakam da ADC konca s pretvorbo
+    // increase and wrap around interrupt counter every 1 second
+    interrupt_cnt = interrupt_cnt + 1;
+    if (interrupt_cnt >= SAMPLE_FREQ)
+    {
+        interrupt_cnt = 0;
+    }
+
+    // wait for the ADC to finish with conversion
     ADC_wait();
 
-    // ali kalibriram preostalo napetost tokovne sonde
+    // at startup calibrate offset in current measurement
     if (offset_calib == TRUE)
     {
-        tok_raw = TOK;
-        tok_offset = (1.0 - offset_filter) * tok_offset + offset_filter * tok_raw;
+        current_raw = CURRENT;
+        current_offset = (1.0 - offset_filter) * current_offset + offset_filter * current_raw;
 
         offset_counter = offset_counter + 1;
         if ( offset_counter == SWITCH_FREQ)
@@ -95,36 +93,37 @@ void interrupt PER_int(void)
         }
 
     }
-    // sicer pa normalno obratujem
+    // otherwise operate normally
     else
     {
-        // preracunam napetost
-        napetost_raw = NAPETOST_ZA;
-        napetost = napetost_raw * napetost_gain;
+    	// calculate voltage measured from ADC data
+        voltage_raw = VOLTAGE_AFTER;
+        voltage = voltage_raw * voltage_gain;
 
-        tok_raw = TOK - tok_offset;
-        tok = -tok_raw * tok_gain;
+        // calculate current measured from ADC data
+        current_raw = CURRENT - current_offset;
+        current = -current_raw * current_gain;
 
-        // generiram zeljeno vrednost
+        // counter for reference value and load toggling
         ref_counter = ref_counter + 1;
         if (ref_counter >= ref_counter_prd)
         {
             ref_counter = 0;
         }
 
-        // stopnica bremena
+        // toggle the load
         if (   (ref_counter > ref_counter_load_on)
-                && (ref_counter < ref_counter_load_off))
+            && (ref_counter < ref_counter_load_off))
         {
             PCB_load_on();
         }
         if (   (ref_counter < ref_counter_load_on)
-                || (ref_counter > ref_counter_load_off))
+            || (ref_counter > ref_counter_load_off))
         {
             PCB_load_off();
         }
         
-        // stopnicasta zeljena vrednost
+        // generate reference value
         if (ref_counter > ref_counter_cmpr)
         {
             ref_value = ref_value_low;
@@ -134,88 +133,84 @@ void interrupt PER_int(void)
             ref_value = ref_value_high;
         }
 
+        reference = ref_value;
         
-        zeljena = ref_value;
-        /*******************************************************
-        * Tukaj pride koda regulatorja
-        *******************************************************/
 
-
-
-
-
-
-
+        // place for PID controller
 
         
-        // osvežim vklono razmerje
+        // send duty cycle to PWM module
         PWM_update(duty);
         
-        // spavim vrednosti v buffer za prikaz
-        DLOG_GEN_update();
     }
-
     
-    /* preverim, èe me sluèajno èaka nova prekinitev.
-       èe je temu tako, potem je nekaj hudo narobe
-       saj je èas izvajanja prekinitve predolg
-       vse skupaj se mora zgoditi najmanj 10krat,
-       da reèemo da je to res problem
-    */
+    // store values for display within CCS or GUI
+    DLOG_GEN_update();
+
+    /* Test if new interrupt is already waiting.
+     * If so, then something is seriously wrong.
+     */
     if (EPwm1Regs.ETFLG.bit.INT == TRUE)
     {
-        // povecam stevec, ki steje take dogodke
-        interrupt_overflow_counter = interrupt_overflow_counter + 1;
-        
-        // in ce se je vse skupaj zgodilo 10 krat se ustavim
-        // v kolikor uC krmili kakšen resen HW, potem moèno
-        // proporoèam lepše "hendlanje" takega dogodka
-        // beri:ugasni moènostno stopnjo, ...
-        if (interrupt_overflow_counter >= 10)
-        {
-            asm(" ESTOP0");
-        }
+    	// count number of interrupt overflow events
+    	interrupt_overflow_counter = interrupt_overflow_counter + 1;
+
+    	/* if interrupt overflow event happened more than 10 times
+    	 * stop the CPU
+    	 *
+    	 * Better solution would be to properly handle this event
+    	 * (shot down the power stage, ...)
+    	 */
+    	if (interrupt_overflow_counter >= 10)
+    	{
+    		asm(" ESTOP0");
+    	}
     }
-    
-    // stopam
+
+    // stop the sCPU load stopwatch
     TIC_stop();
 
 }   // end of PWM_int
 
 /**************************************************************
-* Funckija, ki pripravi vse potrebno za izvajanje
-* prekinitvene rutine
+* Function which initializes all required for execution of
+* interrupt function
 **************************************************************/
 void PER_int_setup(void)
 {
 
-    // Proženje prekinitve 
-    EPwm1Regs.ETSEL.bit.INTSEL = ET_CTR_ZERO;    //sproži prekinitev na periodo
-    EPwm1Regs.ETPS.bit.INTPRD = ET_1ST;         //ob vsakem prvem dogodku
-    EPwm1Regs.ETCLR.bit.INT = 1;                //clear possible flag
-    EPwm1Regs.ETSEL.bit.INTEN = 1;              //enable interrupt
-
-    // inicializiram data logger
-    dlog.trig_value = SWITCH_FREQ - 10;    // specify trigger value
+    // initialize data logger
+    dlog.trig_level = SWITCH_FREQ - 10;    // specify trigger value
     dlog.slope = Positive;                 // trigger on positive slope
-    dlog.prescalar = 1;                    // store every  sample
+    dlog.downsample_ratio = 1;             // store every  sample
     dlog.mode = Normal;                    // Normal trigger mode
     dlog.auto_time = 100;                  // number of calls to update function
     dlog.holdoff_time = 100;               // number of calls to update function
 
     dlog.trig = &ref_counter;
-    dlog.iptr1 = &napetost;
-    dlog.iptr2 = &tok;
+    dlog.iptr1 = &voltage;
+    dlog.iptr2 = &current;
 
+    // setup interrupt trigger
+    EPwm1Regs.ETSEL.bit.INTSEL = ET_CTR_ZERO;    //sproži prekinitev na periodo
+    EPwm1Regs.ETPS.bit.INTPRD = ET_1ST;         //ob vsakem prvem dogodku
+    EPwm1Regs.ETCLR.bit.INT = 1;                //clear possible flag
+    EPwm1Regs.ETSEL.bit.INTEN = 1;              //enable interrupt
 
-    // registriram prekinitveno rutino
+    // register the interrupt function
     EALLOW;
     PieVectTable.EPWM1_INT = &PER_int;
     EDIS;
+
+    // acknowledge any spurious interrupts
     PieCtrlRegs.PIEACK.all = PIEACK_GROUP3;
+
+    // enable interrupt within PIE
     PieCtrlRegs.PIEIER3.bit.INTx1 = 1;
+
+    // enable interrupt within CPU
     IER |= M_INT3;
-    // da mi prekinitev teèe  tudi v real time naèinu
-    // (za razhoršèevanje main zanke in BACK_loop zanke)
+
+    // enable interrupt in real time mode
     SetDBGIER(M_INT3);
 }

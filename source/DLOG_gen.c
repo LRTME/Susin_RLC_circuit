@@ -2,13 +2,6 @@
 * FILENAME:     DLOG_gen.c
 * DESCRIPTION:  generic data logger module
 * AUTHOR:       Mitja Nemec
-* START DATE:   16.1.2009
-* VERSION:      1.1
-*
-* CHANGES : 
-* VERSION   DATE        WHO         DETAIL 
-* 1.0       16.1.2009   Mitja Nemec Initial version
-* 1.1       23.2.2010   Mitja Nemec Added various trigger modes
 *
 ****************************************************************/
 #include "DLOG_gen.h"
@@ -68,27 +61,89 @@ struct DLOG dlog =
     1,
     0,
     0,
+    DLOG_GEN_SIZE,
     Wait,
     Positive,
     DLOG_GEN_SIZE,
     0L,
     DLOG_GEN_SIZE,
     0L,
-    Auto
+    Auto,
+    0
 };
 
+/**************************************************************
+* update DLOG module
+**************************************************************/
+#pragma CODE_SECTION(DLOG_GEN_update, "ramfuncs");
 void DLOG_GEN_update(void)
 {
-    // najprej pocakam da prirpavim trigger
+    // in continuous mode, just store the date
+    if (dlog.mode == Continuous)
+    {
+        // if this sample is right then store
+        if (dlog.skip_cntr ==0)
+        {
+            DLOG_b_1[dlog.write_ptr] = *(dlog.iptr1);
+
+            #if DLOG_GEN_NR > 1
+            DLOG_b_2[dlog.write_ptr] = *(dlog.iptr2);
+            #endif
+
+            #if DLOG_GEN_NR > 2
+            DLOG_b_3[dlog.write_ptr] = *(dlog.iptr3);
+            #endif
+
+            #if DLOG_GEN_NR > 3
+            DLOG_b_4[dlog.write_ptr] = *(dlog.iptr4);
+            #endif
+
+            #if DLOG_GEN_NR > 4
+            DLOG_b_5[dlog.write_ptr] = *(dlog.iptr5);
+            #endif
+
+            #if DLOG_GEN_NR > 5
+            DLOG_b_6[dlog.write_ptr] = *(dlog.iptr6);
+            #endif
+
+            #if DLOG_GEN_NR > 6
+            DLOG_b_7[dlog.write_ptr] = *(dlog.iptr7);
+            #endif
+
+            #if DLOG_GEN_NR > 7
+            DLOG_b_8[dlog.write_ptr] = *(dlog.iptr8);
+            #endif
+
+            (dlog.write_ptr)++;
+            // wrap the pointer around if necessary
+            if (dlog.write_ptr == dlog.write_length)
+            {
+                dlog.write_ptr = 0;
+            }
+        }
+        // otherwise downsample for prescalar amount
+        (dlog.skip_cntr)++;
+        if ((dlog.skip_cntr) >= (dlog.downsample_ratio))
+        {
+            dlog.skip_cntr = 0;
+        }
+    }
+    else
+    {
+    // if waiting for trigger pre-condition
     if ((dlog.state == Wait))
     {
-        // ce sem zaustavljen po uspesni single shot pretvorbi
-        // cakam na uporabnika, da spremeni nacin
+        // if stopped wait for mode change or SW trigger
         if (dlog.mode == Stop)
         {
-            // DO NOTHING
+            if (dlog.sw_trigger != 0)
+            {
+                dlog.state = Ready;
+                dlog.mode = Single;
+                dlog.sw_trigger = 0;
+            }
         }
-        // sicer pa prozi triger ali pa triger vsaj pripravi
+        // check for trigger condition or auto trigger
         else
         {
             // Auto trigger in Auto mode
@@ -104,16 +159,22 @@ void DLOG_GEN_update(void)
             // ready trigger if positive slope (value is below trigg value)
             if (dlog.slope == Positive)
             {
-                if(*(dlog.trig) < dlog.trig_value) dlog.state = Ready;
+                if(*(dlog.trig) < dlog.trig_level) dlog.state = Ready;
             }
             // ready trigger if negative slope (value is above trigg value)
             else
             {
-                if(*(dlog.trig) > dlog.trig_value) dlog.state = Ready;
+                if(*(dlog.trig) > dlog.trig_level) dlog.state = Ready;
+            }
+            // ce je sw triger potem kar sproži
+            if (dlog.sw_trigger != 0)
+            {
+                dlog.state = Ready;
+                dlog.sw_trigger = 0;
             }
         }
     }
-    // cakam na trigger
+    // wait for actual trigger condition
     if (dlog.state == Ready)
     {
         // Auto trigger in Auto mode
@@ -126,11 +187,10 @@ void DLOG_GEN_update(void)
                 dlog.auto_cnt = 0;
             }
         }
-
         //  Check for positive slope trigger event
         if (dlog.slope == Positive)
         {
-            if(*(dlog.trig) >= dlog.trig_value)
+            if(*(dlog.trig) >= dlog.trig_level)
             {
                 dlog.state = Store;
                 dlog.auto_cnt = 0;
@@ -139,63 +199,67 @@ void DLOG_GEN_update(void)
         // check for negative slope trigger event 
         else
         {
-            if(*(dlog.trig) <= dlog.trig_value)
+            if(*(dlog.trig) <= dlog.trig_level)
             {
                 dlog.state = Store;
                 dlog.auto_cnt = 0;
             }
 
-        }    
+        }
+
+        // or SW trigger
+        if (dlog.sw_trigger != 0)
+        {
+            dlog.state = Store;
+            dlog.auto_cnt = 0;
+            dlog.sw_trigger = 0;
+        }
     }
-    // ce delam, potem shranjujem v buffer
+
+    // if in store mode store until full
     if (dlog.state == Store)
     {
+        // if this sample is right then store
         if (dlog.skip_cntr ==0)
         {
-            // spravim prvi kanal
             DLOG_b_1[dlog.write_ptr] = *(dlog.iptr1);
 
             #if DLOG_GEN_NR > 1
-            // spravim drugi kanal
             DLOG_b_2[dlog.write_ptr] = *(dlog.iptr2);
             #endif
 
             #if DLOG_GEN_NR > 2
-            // spravim tretji kanal
             DLOG_b_3[dlog.write_ptr] = *(dlog.iptr3);
             #endif
 
             #if DLOG_GEN_NR > 3
-            // spravim cetrti kanal
             DLOG_b_4[dlog.write_ptr] = *(dlog.iptr4);
             #endif
 
             #if DLOG_GEN_NR > 4
-            // spravim peti kanal
             DLOG_b_5[dlog.write_ptr] = *(dlog.iptr5);
             #endif
 
             #if DLOG_GEN_NR > 5
-            // spravim sesti kanal
             DLOG_b_6[dlog.write_ptr] = *(dlog.iptr6);
             #endif
 
             #if DLOG_GEN_NR > 6
-            // spravim sedmi kanal
             DLOG_b_7[dlog.write_ptr] = *(dlog.iptr7);
             #endif
 
             #if DLOG_GEN_NR > 7
-            // spravim osmi kanal
             DLOG_b_8[dlog.write_ptr] = *(dlog.iptr8);
             #endif
 
-            // nastavim kazalec za bufferje
             (dlog.write_ptr)++;
-            if (dlog.write_ptr == DLOG_GEN_SIZE)
+
+            // when full stop and prepera for next trigger
+            if (dlog.write_ptr == dlog.write_length)
             {
                 dlog.write_ptr = 0;
                 dlog.skip_cntr = 0;
+
                 if (dlog.mode != Single)
                 {
                     dlog.state = Holdoff;
@@ -208,11 +272,16 @@ void DLOG_GEN_update(void)
                 }
             }
         }
+        
+        // otherwise downsample for prescalar amount
         (dlog.skip_cntr)++;
-        if ((dlog.skip_cntr) >= (dlog.prescalar)) dlog.skip_cntr = 0;
+        if ((dlog.skip_cntr) >= (dlog.downsample_ratio))
+        {
+            dlog.skip_cntr = 0;
+        }
     }
 
-    // preden pripravim nov trigger pocakam
+    // wait for holdoff time before lokking for new trigger
     if (dlog.state == Holdoff)
     {
         dlog.holdoff_cnt = dlog.holdoff_cnt + 1;
@@ -220,5 +289,6 @@ void DLOG_GEN_update(void)
         {
             dlog.state = Wait;
         }
+    }
     }
 }

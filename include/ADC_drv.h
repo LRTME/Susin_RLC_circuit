@@ -10,23 +10,22 @@
 
 #include    "DSP28x_Project.h"
 
-// doloci kateri PWM modul prozi ADC
+// which PWM module is the trigger source for ADC
 #define     ADC_MODUL1      EPwm1Regs
 
-// kje se nahajajo rezultati
+// map the results registers to defines, for easier reconfiguration
 #define     ADC_RESULT0     (AdcResult.ADCRESULT0)
-#define     NAPETOST_ZA     (AdcResult.ADCRESULT1)
-#define     NAPETOST_PRED   (AdcResult.ADCRESULT2)
-#define     TOK             (AdcResult.ADCRESULT3)
+#define     VOLTAGE_BEFORE  (AdcResult.ADCRESULT1)
+#define     VOLTAGE_AFTER   (AdcResult.ADCRESULT2)
+#define     CURRENT         (AdcResult.ADCRESULT3)
 
 /**************************************************************
-* inicializiramo ADC
+* initialize ADC
 **************************************************************/
 extern void ADC_init(void);
 
 /**************************************************************
-* Funkcija, ki pocaka da ADC konca s pretvorbo
-* vzorcimo...
+* waits for the ADC to finish with current sequence
 * return: void
 **************************************************************/
 extern void ADC_wait(void);

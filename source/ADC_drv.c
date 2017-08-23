@@ -2,13 +2,12 @@
 * FILE:         ADC_drv.c
 * DESCRIPTION:  A/D driver for piccolo devices
 * AUTHOR:       Mitja Nemec
-* DATE:         19.1.2012
 *
 ****************************************************************/
 #include "ADC_drv.h"
 
 /**************************************************************
-* inicializiramo ADC
+* initialize ADC
 **************************************************************/
 void ADC_init(void)
 {
@@ -77,20 +76,17 @@ void ADC_init(void)
     AdcRegs.ADCSOC3CTL.bit.TRIGSEL = 0x05;  //set SOC3 to start trigger on EPWM1A
     AdcRegs.ADCSOC3CTL.bit.ACQPS = 6;       //set SOC3 S/H Window to 7 ADC Clock Cycles,
 
-    //tu povemo naj se postavi interrupt flag, ko je zadnja pretvorba koncna
-    //interrupt je se naprej onemogocen, flag ki se bo postavil pa nam bo
-    //sluzil za detektiranje konca niza pretvorb
-    AdcRegs.INTSEL1N2.bit.INT1SEL = 0x00;   //interrupt1 naj prozi signal EOC1, ker je to soc, ki se zadnji izvede
-    AdcRegs.INTSEL1N2.bit.INT1E = 1;        //prekinitev ob interrpt dogodku je omogocena (da se lahko postavi flag)
-    AdcRegs.ADCINTFLGCLR.bit.ADCINT1 = 1;   //pobrise se flag
+    // which SOC raises INT flag
+    AdcRegs.INTSEL1N2.bit.INT1SEL = 0x00;
+    AdcRegs.INTSEL1N2.bit.INT1E = 1;
+    AdcRegs.ADCINTFLGCLR.bit.ADCINT1 = 1;
 
     EDIS;
 
 }   //end of AP_ADC_init
 
 /**************************************************************
-* Funkcija, ki pocaka da ADC konca s pretvorbo
-* vzorcimo...
+* waits for the ADC to finish with current sequence
 * return: void
 **************************************************************/
 void ADC_wait(void)
@@ -99,5 +95,5 @@ void ADC_wait(void)
     {
         /* DO NOTHING */
     }
-    AdcRegs.ADCINTFLGCLR.bit.ADCINT1 = 1;               //pobrisem flag bit od ADC-ja
+    AdcRegs.ADCINTFLGCLR.bit.ADCINT1 = 1;
 }

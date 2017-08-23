@@ -1,50 +1,39 @@
 /************************************************************** 
 * FILE:         PWM_drv.c
-* DESCRIPTION:  A/D in PWM driver for TMS320F2808
-* AUTHOR:       Andraž Kontarèek, Mitja Nemec
-* DATE:         21.12.2009
+* DESCRIPTION:  PWM driver
+* AUTHOR:       Mitja Nemec
 *
 ****************************************************************/
 #include "PWM_drv.h"
 
-// prototipi lokalnih funkcij
-
-
 /**************************************************************
-* Funkcija, ki popiše registre za PWM1,2 in 3. Znotraj funkcije
-* se omogoèi interrupt za proženje ADC, popiše se perioda, compare
-* register, tripzone register, omogoèi se izhode za PWM...
-* return:void
+* PWM initialization
 **************************************************************/
 void PWM_init(void)
 {
-//EPWM Module 1
     // setup timer base 
-    EPwm1Regs.TBPRD = PWM_PERIOD/2;       //nastavljeno na 25us, PWM_PERIOD = 50us  
-    EPwm1Regs.TBCTL.bit.PHSDIR = 0;       // count up after sync
-    EPwm1Regs.TBCTL.bit.CLKDIV = 0;
-    EPwm1Regs.TBCTL.bit.HSPCLKDIV = 0;
-    EPwm1Regs.TBCTL.bit.SYNCOSEL = 1;     // sync out on zero
-    EPwm1Regs.TBCTL.bit.PRDLD = 0;        // shadowed period reload
-    EPwm1Regs.TBCTL.bit.PHSEN = 0;        // master timer does not sync  
+    EPwm1Regs.TBPRD = PWM_PERIOD/2;       
+    EPwm1Regs.TBCTL.bit.PHSDIR = TB_UP;
+    EPwm1Regs.TBCTL.bit.CLKDIV = TB_DIV1;
+    EPwm1Regs.TBCTL.bit.HSPCLKDIV = TB_DIV1;
+    EPwm1Regs.TBCTL.bit.SYNCOSEL = TB_CTR_ZERO;
+    EPwm1Regs.TBCTL.bit.PRDLD = TB_SHADOW;
+    EPwm1Regs.TBCTL.bit.PHSEN = TB_DISABLE;
     EPwm1Regs.TBCTR = 1;
 
-        // debug mode behafiour
+    // debug mode behaviour
     #if PWM_DEBUG == 0
-    EPwm1Regs.TBCTL.bit.FREE_SOFT = 0;  // stop immediately
     EPwm1Regs.TBCTL.bit.FREE_SOFT = 0;  // stop immediately
     #endif
     #if PWM_DEBUG == 1
     EPwm1Regs.TBCTL.bit.FREE_SOFT = 1;  // stop when finished
-    EPwm1Regs.TBCTL.bit.FREE_SOFT = 1;  // stop when finished
     #endif
-    #if FB_DEBUG == 2
-    EPwm1Regs.TBCTL.bit.FREE_SOFT = 3;  // run free
+    #if PWM_DEBUG == 2
     EPwm1Regs.TBCTL.bit.FREE_SOFT = 3;  // run free
     #endif
-    
+
     // Compare registers
-    EPwm1Regs.CMPA.half.CMPA = PWM_PERIOD/4;                 //50% duty cycle
+    EPwm1Regs.CMPA.half.CMPA = PWM_PERIOD/4;
 
     // Init Action Qualifier Output A Register 
     EPwm1Regs.AQCTLA.bit.CAU = AQ_CLEAR;  // clear output on CMPA_UP
@@ -54,127 +43,81 @@ void PWM_init(void)
     
     // Trip zone 
 
-    // Event trigger
-    // Proženje ADC-ja
-    EPwm1Regs.ETSEL.bit.SOCASEL = 2;    //sproži prekinitev na periodo
-    EPwm1Regs.ETPS.bit.SOCAPRD = 1;     //ob vsakem prvem dogodku
-    EPwm1Regs.ETCLR.bit.SOCA = 1;       //clear possible flag
-    EPwm1Regs.ETSEL.bit.SOCAEN = 1;     //enable ADC Start Of conversion
-    // Proženje prekinitve 
-    EPwm1Regs.ETSEL.bit.INTSEL = 2;             //sproži prekinitev na periodo
-    EPwm1Regs.ETPS.bit.INTPRD = PWM_INT_PSCL;   //ob vsakem prvem dogodku
-    EPwm1Regs.ETCLR.bit.INT = 1;                //clear possible flag
-    EPwm1Regs.ETSEL.bit.INTEN = 1;              //enable interrupt
+    PWM_update(0.0);
 
-//EPWM Module 2
-
-//EPWM Module 3
- 
-// output pin setup
+    // output pin setup
     EALLOW;
     GpioCtrlRegs.GPAMUX1.bit.GPIO0 = 1;   // GPIO0 pin is under ePWM control
-    EDIS;                                 // Disable EALLOW
+    EDIS;
 
 }   //end of PWM_PWM_init
 
 /**************************************************************
-* Funkcija, ki na podlagi vklopnega razmerja in izbranega vektorja
-* vklopi doloèene tranzistorje
-* return: void
-* arg1: vklopno razmerje od 0.0 do 1.0 (format IQ)
+* PWM duty cycle update
+* arg1: duty - Per Unit duty cycle [0.0, 1.0]
 **************************************************************/
 void PWM_update(float duty)
 {
-   int compare;
+    int compare;
 
-    // zašèita za duty cycle 
-    //(zašèita za sektor je narejena v default switch case stavku)
+    // saturation
     if (duty < 0.0) duty = 0.0;
     if (duty > 1.0) duty = 1.0;
 
-    //izraèunam vrednost compare registra(iz periode in preklopnega razmerja)
+    // get the compare value
     compare = (int)((PWM_PERIOD/2) * duty);
-
-    // vpisem vrednost v register
     EPwm1Regs.CMPA.half.CMPA = compare;
-    
-
-}  //end of AP_PWM_update
+}  //end of PWM_update
 
 /**************************************************************
-* Funkcija, ki nastavi periodo, za doseganje zeljene periode
-* in je natancna na cikel natancno
-* return: void
-* arg1: zelena perioda
+* Set PWM period in seconds
+* arg1: period - PWM period in seconds
 **************************************************************/
-void PWM_period(float perioda)
+void PWM_period(float period)
 {
-    // spremenljivke
+    // local variables
     float   temp_tbper;
     static float ostanek = 0;
     long celi_del;
 
-    // naracunam TBPER (CPU_FREQ * perioda)
-    temp_tbper = perioda * CPU_FREQ/2;
+    // calcualte TBPER (CPU_FREQ * period)
+    temp_tbper = period * PWM_TMR_FREQ/2;
     
-    // izlocim celi del in ostanek
+    // get the integer
     celi_del = (long)temp_tbper;
-    ostanek = temp_tbper - celi_del;
-    // povecam celi del, ce je ostanek veji od 1
+    // acumulate decimal part
+    ostanek = ostanek + temp_tbper - celi_del;
+    // act upon overflow of decimal part
     if (ostanek > 1.0)
     {
         ostanek = ostanek - 1.0;
         celi_del = celi_del + 1;
     }
     
-    // nastavim TBPER
+    // set the period register
     EPwm1Regs.TBPRD = celi_del;
-}   //end of FB_period
+}   //end of PWM_period
 
 /**************************************************************
-* Funkcija, ki nastavi periodo, za doseganje zeljene frekvence
-* in je natancna na cikel natancno
-* return: void
-* arg1: zelena frekvenca
+* Set PWM period in Hz
+* arg1: period - PWM period in Hz
 **************************************************************/
-void PWM_frequency(float frekvenca)
+void PWM_frequency(float frequency)
 {
-    // spremenljivke
-    float   temp_tbper;
-    static float ostanek = 0;
-    long celi_del;
-
-    // naracunam TBPER (CPU_FREQ / SAMPLING_FREQ) - 1
-    temp_tbper = (CPU_FREQ/2) / frekvenca;
-
-    // izlocim celi del in ostanek
-    celi_del = (long)temp_tbper;
-    ostanek = temp_tbper - celi_del;
-    // povecam celi del, ce je ostanek veji od 1
-    if (ostanek > 1.0)
-    {
-        ostanek = ostanek - 1.0;
-        celi_del = celi_del + 1;
-    }
-    
-    // nastavim TBPER
-    EPwm1Regs.TBPRD = celi_del - 1;
-}   //end of FB_frequency
+    PWM_period(1.0/frequency);
+}   //end of PWM_frequency
   
 /**************************************************************
-* Funkcija, ki starta PWM1. Znotraj funkcije nastavimo
-* naèin štetja èasovnikov (up-down-count mode)
-* return: void
+* Start PWM timer
 **************************************************************/
 void PWM_start(void)
 {
     EALLOW;
     SysCtrlRegs.PCLKCR0.bit.TBCLKSYNC = 0;
-    EPwm1Regs.TBCTL.bit.CTRMODE = TB_COUNT_UPDOWN;  //up-down-count mode
+    EPwm1Regs.TBCTL.bit.CTRMODE = TB_COUNT_UPDOWN;
     SysCtrlRegs.PCLKCR0.bit.TBCLKSYNC = 1;
     EDIS;
-    
-}   //end of AP_PWM_start
+}   //end of PWM_start
 
 
 

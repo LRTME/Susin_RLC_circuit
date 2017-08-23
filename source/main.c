@@ -1,52 +1,53 @@
 /****************************************************************
-* FILENAME:     main.c
+* FILE:         main.h
 * DESCRIPTION:  initialization code
 * AUTHOR:       Mitja Nemec
-* START DATE:   16.1.2009
-* VERSION:      1.0
-*
-* CHANGES : 
-* VERSION   DATE        WHO         DETAIL 
-* 1.0       16.1.2009   Mitja Nemec Initial version
 *
 ****************************************************************/
 #include "main.h"
 
+// Global variables
+
+// function declaration
+
 /**************************************************************
-* Funkcija, ki se izvede inicializacijo
+* main function only executes initialization code
 **************************************************************/
 void main(void)
 {
-    // PLL, in ura
+	// local variables
+
+
+	// initialize system clock
     InitSysCtrl();
     
-    // GPIO - najprej
+    // default GPIO initialization
     InitGpio();
 
-    // generic init of PIE
+    // initialize PIE expansion unit
     InitPieCtrl();
 
-    // basic vector table
+    // populate vector table with dummy interrupt functions
     InitPieVectTable();
 
-    // inicializiram ADC in PWM modul
+    // initialize ADC and PWM
     ADC_init();
 
     PWM_init();
 
-    // inicializiram vhodno izhodne pine
+    // initialize specific GPIO functions
     PCB_init();
 
-    // inicializiram peridoièno prekinitev za regulacijo motorja
+    // initialize periodic interrupt function
     PER_int_setup();
 
-    // omogocim prekinitve
+    // enable interrupts
     EINT;
     ERTM;
 
-    // pozenem casovnik, ki bo prozil ADC in prekinitev
+    // start timer, which will trigger ADC and an interrupt
     PWM_start();
 
-    // grem v neskoncno zanko, ki se izvaja v ozadju
+    // proceed to background loop code
     BACK_loop();
 }   // end of main
