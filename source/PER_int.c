@@ -8,34 +8,34 @@
 #include    "TIC_toc.h"
 
 // variables required for voltage measurement
-long voltage_raw = 0;
-long voltage_offset = 0;
-float voltage_gain = ??;
-float voltage = 0.0;
+long    voltage_raw = 0;
+long    voltage_offset = 0;
+float   voltage_gain = ??;
+float   voltage = 0.0;
 
 // variables required for current measurement
-long current_raw = 0;
-long current_offset = 2048;
-float current_gain = ??;
-float current = 0.0;
+long    current_raw = 0;
+long    current_offset = 2048;
+float   current_gain = ??;
+float   current = 0.0;
 
 // duty cycle
-float duty = 0.0;
+float   duty = 0.0;
 
 // variables for reference value generation and load toggling
-float ref_counter = 0;
-float ref_counter_prd = SWITCH_FREQ;
-float ref_counter_cmpr = 800;
-float ref_counter_load_on = 350;
-float ref_counter_load_off = 650;
+float   ref_counter = 0;
+float   ref_counter_prd = SWITCH_FREQ;
+float   ref_counter_cmpr = 800;
+float   ref_counter_load_on = 350;
+float   ref_counter_load_off = 650;
 
-float ref_value = 0;
-float ref_value_high = 2.5;
-float ref_value_low = 0.25;
+float   ref_value = 0;
+float   ref_value_high = 2.5;
+float   ref_value_low = 0.25;
 
 // variables for offset calibration 
 bool    offset_calib = TRUE;
-long     offset_counter = 0;
+long    offset_counter = 0;
 float   offset_filter = 0.005;
 
 // CPU load estimation
@@ -43,15 +43,15 @@ float   cpu_load  = 0.0;
 long    interrupt_cycles = 0;
 
 // counter of too long interrupt function executions
-int interrupt_overflow_counter = 0;
+int     interrupt_overflow_counter = 0;
 
 // variables for the PID controller
-float reference = 0.0;
+float   reference = 0.0;
 
 
 
 /**************************************************************
-* interrupt funcion
+* interrupt function
 **************************************************************/
 #pragma CODE_SECTION(PER_int, "ramfuncs");
 void interrupt PER_int(void)
@@ -152,19 +152,19 @@ void interrupt PER_int(void)
      */
     if (EPwm1Regs.ETFLG.bit.INT == TRUE)
     {
-    	// count number of interrupt overflow events
-    	interrupt_overflow_counter = interrupt_overflow_counter + 1;
+        // count number of interrupt overflow events
+        interrupt_overflow_counter = interrupt_overflow_counter + 1;
 
-    	/* if interrupt overflow event happened more than 10 times
-    	 * stop the CPU
-    	 *
-    	 * Better solution would be to properly handle this event
-    	 * (shot down the power stage, ...)
-    	 */
-    	if (interrupt_overflow_counter >= 10)
-    	{
-    		asm(" ESTOP0");
-    	}
+        /* if interrupt overflow event happened more than 10 times
+         * stop the CPU
+         *
+         * Better solution would be to properly handle this event
+         * (shot down the power stage, ...)
+         */
+        if (interrupt_overflow_counter >= 10)
+        {
+            asm(" ESTOP0");
+        }
     }
 
     // stop the sCPU load stopwatch
@@ -180,22 +180,28 @@ void PER_int_setup(void)
 {
 
     // initialize data logger
-    dlog.trig_level = SWITCH_FREQ - 10;    // specify trigger value
-    dlog.slope = Positive;                 // trigger on positive slope
-    dlog.downsample_ratio = 1;             // store every  sample
-    dlog.mode = Normal;                    // Normal trigger mode
-    dlog.auto_time = 100;                  // number of calls to update function
-    dlog.holdoff_time = 100;               // number of calls to update function
+    // specify trigger value
+    dlog.trig_level = SWITCH_FREQ - 10;    
+    // trigger on positive slope
+    dlog.slope = Positive;                 
+    // store every  sample
+    dlog.downsample_ratio = 1;             
+    // Normal trigger mode
+    dlog.mode = Normal;                    
+    // number of calls to update function
+    dlog.auto_time = 100;                  
+    // number of calls to update function
+    dlog.holdoff_time = 100;               
 
     dlog.trig = &ref_counter;
     dlog.iptr1 = &voltage;
     dlog.iptr2 = &current;
 
     // setup interrupt trigger
-    EPwm1Regs.ETSEL.bit.INTSEL = ET_CTR_ZERO;    //sproži prekinitev na periodo
-    EPwm1Regs.ETPS.bit.INTPRD = ET_1ST;         //ob vsakem prvem dogodku
-    EPwm1Regs.ETCLR.bit.INT = 1;                //clear possible flag
-    EPwm1Regs.ETSEL.bit.INTEN = 1;              //enable interrupt
+    EPwm1Regs.ETSEL.bit.INTSEL = ET_CTR_ZERO;
+    EPwm1Regs.ETPS.bit.INTPRD = ET_1ST;
+    EPwm1Regs.ETCLR.bit.INT = 1;
+    EPwm1Regs.ETSEL.bit.INTEN = 1;
 
     // register the interrupt function
     EALLOW;
