@@ -24,7 +24,7 @@ float   duty = 0.0;
 
 // variables for reference value generation and load toggling
 float   ref_counter = 0;
-float   ref_counter_prd = SWITCH_FREQ;
+float   ref_counter_prd = SAMPLE_FREQ;
 float   ref_counter_cmpr = 800;
 float   ref_counter_load_on = 350;
 float   ref_counter_load_off = 650;
@@ -68,7 +68,7 @@ void interrupt PER_int(void)
     TIC_start();
 
     // get previous CPU load estimate
-    cpu_load = (float)interrupt_cycles * ((float)SWITCH_FREQ/CPU_FREQ);
+    cpu_load = (float)interrupt_cycles * ((float)SAMPLE_FREQ/CPU_FREQ);
 
     // increase and wrap around interrupt counter every 1 second
     interrupt_cnt = interrupt_cnt + 1;
@@ -87,7 +87,7 @@ void interrupt PER_int(void)
         current_offset = (1.0 - offset_filter) * current_offset + offset_filter * current_raw;
 
         offset_counter = offset_counter + 1;
-        if ( offset_counter == SWITCH_FREQ)
+        if ( offset_counter == SAMPLE_FREQ)
         {
             offset_calib = FALSE;
         }
@@ -181,7 +181,7 @@ void PER_int_setup(void)
 
     // initialize data logger
     // specify trigger value
-    dlog.trig_level = SWITCH_FREQ - 10;    
+    dlog.trig_level = SAMPLE_FREQ - 10;    
     // trigger on positive slope
     dlog.slope = Positive;                 
     // store every  sample

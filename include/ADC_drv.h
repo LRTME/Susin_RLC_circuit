@@ -2,7 +2,6 @@
 * FILE:         ADC_drv.c
 * DESCRIPTION:  A/D driver for piccolo devices
 * AUTHOR:       Mitja Nemec
-* DATE:         19.1.2012
 *
 ****************************************************************/
 #ifndef     __ADC_DRV_H__
