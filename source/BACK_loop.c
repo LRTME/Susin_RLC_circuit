@@ -28,8 +28,12 @@ void BACK_loop(void)
     // infinite background loop
     while (1)
     {
-
-        
+    // once a second (when interrupt_cnt roles over) toggled LEDs on PCB
+        if (interrupt_cnt == 0)
+        {
+            PCB_LEDstick_toggle();
+            // wait for at least 100 us, in order prevent executing this code twice
+            DELAY_US(100L);
+        }
     }   // end of while(1)
-        
 }       // end of BACK_loop
