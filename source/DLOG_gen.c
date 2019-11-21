@@ -220,7 +220,7 @@ void DLOG_GEN_update(void)
     if (dlog.state == Store)
     {
         // if this sample is right then store
-        if (dlog.skip_cntr ==0)
+        if (dlog.skip_cntr == 0)
         {
             DLOG_b_1[dlog.write_ptr] = *(dlog.iptr1);
 
@@ -254,7 +254,7 @@ void DLOG_GEN_update(void)
 
             (dlog.write_ptr)++;
 
-            // when full stop and prepera for next trigger
+            // when full stop and prepare for next trigger
             if (dlog.write_ptr == dlog.write_length)
             {
                 dlog.write_ptr = 0;

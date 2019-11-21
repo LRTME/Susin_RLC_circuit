@@ -7,28 +7,39 @@
 #ifndef     __DEFINE_H__
 #define     __DEFINE_H__
 
-// switching frequency
-#define     SWITCH_FREQ     40000L
+// CPU speed [Hz]
+#define     CPU_FREQ        80000000L
+
+// switching frequency [Hz]
+#define     SWITCH_FREQ     20000L
 
 // ratio between switching and sampling frequency
 #define     SAMP_PRESCALE   1
 
-// sampling frequency
+// sampling frequency [Hz]
 #define     SAMPLE_FREQ     (SWITCH_FREQ/SAMP_PRESCALE)
 
-// sampling period
+// sampling period [s]
 #define     SAMPLE_TIME     (1.0/SAMPLE_FREQ)
 
-// CPU speed
-#define     CPU_FREQ        80000000L
+// periodic signal frequency [Hz]
+#define		PERIOD_SIG_FREQ		50.0
 
-// grid frequency
-#define		GRID_FREQ		50.0
+// number of samples in one period of periodic signal
+#define		SAMPLE_POINTS	(SAMPLE_FREQ/PERIOD_SIG_FREQ)
 
 // math constants
 #define     SQRT3           1.7320508075688772935274463415059
 #define     SQRT2           1.4142135623730950488016887242097
+#define     ZSQRT2          0.70710678118654752440084436210485
 #define     PI              3.1415926535897932384626433832795
+
+// RLC circuit resistance [Ohm]
+#define		R_rlc			2.2
+// RLC circuit inductance [H]
+#define		L_rlc			150e-3
+// RLC circuit capacitance [F]
+#define		C_rlc			3.3e-6
 
 // bool type definition
 typedef enum {FALSE = 0, TRUE} bool;

@@ -32,7 +32,6 @@ void main(void)
 
     // initialize ADC and PWM
     ADC_init();
-
     PWM_init();
 
     // initialize specific GPIO functions

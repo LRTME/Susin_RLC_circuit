@@ -12,6 +12,9 @@
 #include    "define.h"
 
 // interrupt counter
-extern volatile float    interrupt_cnt;
+extern volatile long    	interrupt_cnt;
+
+extern int					interrupt_cnt_min;
+extern int					interrupt_cnt_s;
 
 #endif // end of __GLOBALS_H__ definition

@@ -20,6 +20,13 @@
 
 #include    "DLOG_gen.h"
 
+#include    "PI_REG.h"
+#include    "RES_REG.h"
+#include    "REP_REG.h"
+#include    "DCT_REG.h"
+#include    "dual_DCT_REG.h"
+
+
 
 /**************************************************************
 * Function which initializes all required for execution of

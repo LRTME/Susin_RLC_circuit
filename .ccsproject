@@ -10,4 +10,5 @@
 	<createSlaveProjects value=""/>
 	<templateProperties value="id=com.ti.common.project.core.emptyProjectTemplate,"/>
 	<isTargetManual value="false"/>
+	<origin value="D:/DenisS/3_Doktorat/Raziskovanje/Projekti/2019_11_13_dvojni_DCT_RLC/Arhiv_programov_C/PID_reg_nap_na_C/DP2_reg_float"/>
 </projectOptions>

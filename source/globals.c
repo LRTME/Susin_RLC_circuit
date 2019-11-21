@@ -7,4 +7,8 @@
 #include "globals.h"
 
 // interrupt counter
-volatile float    interrupt_cnt = 0;
+volatile long    	interrupt_cnt = 0;
+
+int					interrupt_cnt_min = 0;
+int					interrupt_cnt_s = 0;
+
