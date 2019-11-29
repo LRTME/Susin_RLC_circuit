@@ -22,11 +22,11 @@
 // sampling period [s]
 #define     SAMPLE_TIME     (1.0/SAMPLE_FREQ)
 
-// periodic signal frequency [Hz]
-#define		PERIOD_SIG_FREQ		50.0
+// periodical signal frequency [Hz]
+#define		SIG_FREQ		50.0
 
 // number of samples in one period of periodic signal
-#define		SAMPLE_POINTS	(SAMPLE_FREQ/PERIOD_SIG_FREQ)
+#define		SAMPLE_POINTS	(SAMPLE_FREQ/SIG_FREQ)
 
 // math constants
 #define     SQRT3           1.7320508075688772935274463415059

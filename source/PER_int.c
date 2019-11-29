@@ -487,7 +487,7 @@ void clear_controllers(void)
 
 
 	// clear all integral parts of repetitive controller
-	// CAUTION: THE FACT IS THAT SOME TIME MUST BE SPEND TO CLEAR THE WHOLE BUFFER (ONE IN EACH ITERATION),
+	// CAUTION: THE FACT IS THAT SOME TIME MUST BE SPEND TO CLEAR THE WHOLE BUFFER (ONE SAMPLE IN EACH ITERATION),
 	//          WHICH IS TYPICAL LESS THAN 1 SEC!
     voltage_REP_reg.ErrSumHistory[clear_REP_buffer_index] = 0.0;
 
@@ -507,11 +507,11 @@ void clear_controllers(void)
 
 
 	// clear all integral parts of DCT controller
-	// CAUTION: THE FACT IS THAT SOME TIME MUST BE SPEND TO CLEAR THE WHOLE BUFFER (ONE IN EACH ITERATION),
+	// CAUTION: THE FACT IS THAT SOME TIME MUST BE SPEND TO CLEAR THE WHOLE BUFFER (ONE SAMPLE IN EACH ITERATION),
 	//          WHICH IS TYPICAL LESS THAN 1 SEC!
 	voltage_DCT_reg.CorrectionHistory[clear_DCT_buffer_index] = 0.0;
 
-	// CAUTION: THE FACT IS THAT SOME TIME MUST BE SPEND TO CLEAR THE WHOLE BUFFER (ONE IN EACH ITERATION),
+	// CAUTION: THE FACT IS THAT SOME TIME MUST BE SPEND TO CLEAR THE WHOLE BUFFER (ONE SAMPLE IN EACH ITERATION),
 	//          WHICH IS TYPICAL LESS THAN 1 SEC!
 	dbuffer1[clear_DCT_buffer_index] = 0.0;
 
@@ -531,7 +531,7 @@ void clear_controllers(void)
 
 
 	// clear all integral parts of dual DCT controller
-	// CAUTION: THE FACT IS THAT SOME TIME MUST BE SPEND TO CLEAR THE WHOLE BUFFER (ONE IN EACH ITERATION),
+	// CAUTION: THE FACT IS THAT SOME TIME MUST BE SPEND TO CLEAR THE WHOLE BUFFER (ONE SAMPLE IN EACH ITERATION),
 	//          WHICH IS TYPICAL LESS THAN 1 SEC!
 	dual_DCT_dbuffer1[clear_dual_DCT_buffer_index] = 0.0;
 	dual_DCT_dbuffer2[clear_dual_DCT_buffer_index] = 0.0;
@@ -594,8 +594,8 @@ void PER_int_setup(void)
     ****************************************/
 
     /* PI controller parameters initialization */
-    voltage_PI_reg.Kp = 1.0;
-    voltage_PI_reg.Ki = 1e-3;
+    voltage_PI_reg.Kp = 2.0; // 1.0;	// 2.0;
+    voltage_PI_reg.Ki = 20.0/SAMPLE_FREQ; // 20.0/SAMPLE_FREQ;
     voltage_PI_reg.OutMax = 1.0;
     voltage_PI_reg.OutMin = 0.0;
 
@@ -610,7 +610,7 @@ void PER_int_setup(void)
 //    voltage_RES_reg8.Harmonic = 8;
 //    voltage_RES_reg9.Harmonic = 9;
 //    voltage_RES_reg10.Harmonic = 10;
-    voltage_RES_reg.Kres = 1e-3; // 13.1/SAMP_FREQ;
+    voltage_RES_reg.Kres = 20.0/SAMPLE_FREQ; // 20.0/SAMPLE_FREQ;
     voltage_RES_reg2.Kres = voltage_RES_reg.Kres;  	// 13.1/SAMP_FREQ
     voltage_RES_reg3.Kres = voltage_RES_reg.Kres;  	// 13.1/SAMP_FREQ
     voltage_RES_reg4.Kres = voltage_RES_reg.Kres;  	// 13.1/SAMP_FREQ
@@ -645,7 +645,7 @@ void PER_int_setup(void)
     /* REPetitive controller parameters initialization */
     REP_REG_INIT_MACRO(voltage_REP_reg);
     voltage_REP_reg.BufferHistoryLength = SAMPLE_POINTS; // 400
-    voltage_REP_reg.Krep = voltage_RES_reg.Kres/(4.0*PERIOD_SIG_FREQ); // 0.065 (1/2 * 13.1/2*50))
+    voltage_REP_reg.Krep = 1/2.0 * (voltage_RES_reg.Kres*SAMPLE_FREQ) / (2.0*SIG_FREQ); // 1.0 = 1/2.0 * 20.0/(2.0*SIG_FREQ)
     voltage_REP_reg.k = 0; // 5
     voltage_REP_reg.w0 = 0.2; // 0.2
     voltage_REP_reg.w1 = 0.2; // 0.2
@@ -673,7 +673,7 @@ void PER_int_setup(void)
 
     // initialize current DCT controller
     DCT_REG_INIT_MACRO(voltage_DCT_reg); // initialize all arrays
-    voltage_DCT_reg.Kdct = voltage_RES_reg.Kres/(4.0*PERIOD_SIG_FREQ); // 0.065 (13.1/4*50))
+    voltage_DCT_reg.Kdct = (voltage_RES_reg.Kres*SAMPLE_FREQ) / (4.0*SIG_FREQ); // 1.0 = 20.0/(4.0*SIG_FREQ)
     voltage_DCT_reg.k = 0; // 5
     voltage_DCT_reg.ErrSumMax = 0.6;
     voltage_DCT_reg.ErrSumMin = -0.6;
@@ -708,7 +708,7 @@ void PER_int_setup(void)
 
     // initialize current dual DCT controller
     dual_DCT_REG_INIT_MACRO(voltage_dual_DCT_reg); // initialize all variables and coefficients
-    voltage_dual_DCT_reg.Kdct = 0.065; // 0.065 (13.1/4*50))
+    voltage_dual_DCT_reg.Kdct = (voltage_RES_reg.Kres*SAMPLE_FREQ) / (4.0*SIG_FREQ); // 1.0 = 20.0/(4.0*SIG_FREQ)
     voltage_dual_DCT_reg.ErrSumMax = 10.0;
     voltage_dual_DCT_reg.ErrSumMin = -10.0;
     voltage_dual_DCT_reg.OutMax = 0.5; // 0.5
