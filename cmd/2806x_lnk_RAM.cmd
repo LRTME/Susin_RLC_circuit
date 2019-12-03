@@ -81,12 +81,12 @@ SECTIONS
 /* VARIABLES */
     .bss: >         D_L46,           PAGE = 1
     .ebss: >        D_L46,           PAGE = 1
-    firldb > 		D_L3   		 	 PAGE = 1				   /* Section for delay buffer for fast FIR filter realization with FPU unit - must be aligned, which is done with #pragma */
-   	coefffilt > 	D_L3   		 	 PAGE = 1				   /* Section for coeff buffer for fast FIR filter realization with FPU unit - must be aligned, which is done with #pragma */
-    dual_DCT_firldb1 > 		D_L46    PAGE = 1					/* Section for delay buffer for fast FIR filter realization with FPU unit - must be aligned, which is done with #pragma */
-   	dual_DCT_coefffilt1 > 	D_L46    PAGE = 1					/* Section for coeff buffer for fast FIR filter realization with FPU unit - must be aligned, which is done with #pragma */
-    dual_DCT_firldb2 > 		D_L46    PAGE = 1					/* Section for delay buffer for fast FIR filter realization with FPU unit - must be aligned, which is done with #pragma */
-   	dual_DCT_coefffilt2 > 	D_L46    PAGE = 1					/* Section for coeff buffer for fast FIR filter realization with FPU unit - must be aligned, which is done with #pragma */
+    firldb > 		D_L3   		 	 PAGE = 1			/* Section for delay buffer for fast FIR filter realization with FPU unit - must be aligned, which is done with #pragma */
+   	coefffilt > 	D_L3   		 	 PAGE = 1			/* Section for coeff buffer for fast FIR filter realization with FPU unit - must be aligned, which is done with #pragma */
+    dual_DCT_firldb1 > 		D_L46    PAGE = 1			/* Section for delay buffer for fast FIR filter realization with FPU unit - must be aligned, which is done with #pragma */
+   	dual_DCT_coefffilt1 > 	D_L46    PAGE = 1			/* Section for coeff buffer for fast FIR filter realization with FPU unit - must be aligned, which is done with #pragma */
+    dual_DCT_firldb2 > 		D_L46    PAGE = 1			/* Section for delay buffer for fast FIR filter realization with FPU unit - must be aligned, which is done with #pragma */
+   	dual_DCT_coefffilt2 > 	D_L46    PAGE = 1			/* Section for coeff buffer for fast FIR filter realization with FPU unit - must be aligned, which is done with #pragma */
 
 /* CODE */
     .text: >        P_L78,           PAGE = 0

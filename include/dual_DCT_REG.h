@@ -3,7 +3,7 @@
 * DESCRIPTION:  dual DCT controller (regulator) which is reducing periodic disturbance
 * AUTHOR:       Denis Sušin
 * START DATE:   28.8.2019
-* VERSION:      2.1
+* VERSION:      3.0
 *
 * CHANGES :
 * VERSION   	DATE		WHO					DETAIL
@@ -12,6 +12,8 @@
 *												compensation accepted in degrees
 * 2.1       	7.11.2019	Denis Sušin			Sign "+" changed with "-" for stable operation,
 *												because of FIR filter library
+* 3.0       	3.12.2019	Denis Sušin			Coefficient recalculation updated without using
+* 												for loop
 *
 ****************************************************************/
 
@@ -27,20 +29,19 @@
 
 
 // maximal length of buffer for saving history of accumulated error and number of coefficients for both DCT (FIR) filters
-#define     FIR_FILTER_NUMBER_OF_COEFF2   	400
+#define     FIR_FILTER_NUMBER_OF_COEFF2   		400
 
 // maximal length of harmonics array
-#define		LENGTH_OF_HARMONICS_ARRAY2		3
+#define		LENGTH_OF_HARMONICS_ARRAY2			20
 // harmonics selection at the beginning that passes through both DCT filters (i.e. "{1,5,7}" means that 1st, 5th and 7th harmonic passes through DCT filter, others are blocked)
-#define		SELECTED_HARMONICS2				{1, 0, 0}
-//#define		SELECTED_HARMONICS2				{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20}
+//#define		SELECTED_HARMONICS2				{1, 0, 0}
+#define		SELECTED_HARMONICS2					{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20}
 // amplitudes for each harmonic at the beginning
-#define		AMPLITUDE_VALUES2				{1.0, 1.0, 1.0}
-//#define		AMPLITUDE_VALUES2				{1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0};
+//#define		AMPLITUDE_VALUES2				{1.0, 1.0, 1.0}
+#define		AMPLITUDE_VALUES2					{1.0, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01};
 // phase delay compensation values for each harmonic at the beginning
-#define		PHASE_LAG_COMPENSATION_VALUES2	{0.0, 0.0, 0.0}
-//#define		PHASE_LAG_COMPENSATION_VALUES2	{4.5, 9.0, 13.5, 18.0, 22.5, 27.0, 31.5, 36.0, 40.5, 45.0, 49.5, 54.0, 58.5, 63.0, 67.5, 72.0, 76.5, 81.0, 85.5, 90.0};
-
+//#define		PHASE_LAG_COMPENSATION_VALUES2	{0.0, 0.0, 0.0}
+ #define		PHASE_LAG_COMPENSATION_VALUES2	{0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
 
 
 typedef struct dual_DCT_REG_FLOAT_STRUCT
