@@ -3,7 +3,7 @@
 * DESCRIPTION:  DCT controller (regulator) which is reducing periodic disturbance
 * AUTHOR:       Denis Sušin
 * START DATE:   29.8.2017
-* VERSION:      3.3
+* VERSION:      4.0
 *
 * CHANGES :
 * VERSION   DATE		WHO					DETAIL
@@ -24,6 +24,9 @@
 *											FIR (DCT) filter coefficients calculation.
 * 3.4		29.8.2019   Denis Sušin			Added pragma in front of two internal functions, cleared unnecessary init value.
 *
+* 4.0 		3.12.2019	Denis Sušin			Coefficient recalculation updated without using
+* 											for loop
+*
 ****************************************************************/
 
 #ifndef INCLUDE_DCT_REG_H_
@@ -41,11 +44,11 @@
 #define     FIR_FILTER_NUMBER_OF_COEFF   	400
 
 // maximal length of harmonics array
-#define		LENGTH_OF_HARMONICS_ARRAY		3
+#define		LENGTH_OF_HARMONICS_ARRAY		20
 //#define		LENGTH_OF_HARMONICS_ARRAY		20
 // harmonics selection at the begining that passes through DCT filter (i.e. "{1,5,7}" means that 1st, 5th and 7th harmonic passes through DCT filter, others are blocked)
-#define		SELECTED_HARMONICS				{1, 0, 0}
-//#define		SELECTED_HARMONICS				{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20}
+//#define		SELECTED_HARMONICS				{1, 0, 0}
+#define		SELECTED_HARMONICS				{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20}
 
 
 
@@ -71,6 +74,7 @@ typedef struct DCT_REG_FLOAT_STRUCT
     int   i_delta;                  // Variable: difference between i and i_prev
 	int   index;                    // Variable: Index build from i and LagCompensation
 	int   j;                        // Variable: Index j for selection of the FIR filter coefficient buffer element
+	int   HarmonicIndex;			// Variable: Index of the for loop (to access each harmonic's element)
 	int   SumOfHarmonicsIndex;		// Variable: Index of the for loop needed to calculate the sum
 	int   SumOfHarmonics;			// Variable: Sum of all elements of the "Harmonics"
 	int   SumOfHarmonicsOld;		// Variable: History of sum of all elements of the "Harmonics"
@@ -102,6 +106,7 @@ typedef struct DCT_REG_FLOAT_STRUCT
     0,      					\
     0,      					\
     0,      					\
+	0,      					\
 	0,      					\
 	0,      					\
 	0,      					\

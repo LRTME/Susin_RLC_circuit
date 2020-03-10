@@ -3,7 +3,7 @@
 * DESCRIPTION:  DCT controller (regulator) which is reducing periodic disturbance
 * AUTHOR:       Denis Sušin
 * START DATE:   29.8.2017
-* VERSION:      3.4
+* VERSION:      4.0
 *
 * CHANGES :
 * VERSION   DATE		WHO					DETAIL
@@ -24,6 +24,9 @@
 *											FIR (DCT) filter coefficients calculation.
 * 3.4		29.8.2019   Denis Sušin			Added pragma in front of two internal functions, cleared unnecessary init value
 *											and static attribute.
+*
+* 4.0 		3.12.2019	Denis Sušin			Coefficient recalculation updated without using
+* 											for loop
 *
 ****************************************************************/
 
@@ -91,31 +94,40 @@ void DCT_REG_CALC (DCT_REG_float *v)
 
 
 	// izraèun vsote bufferja, kjer so doloèeni harmoniki, ki jih reguliramo
-	v->SumOfHarmonics = 0;
-	for(v->SumOfHarmonicsIndex = 0; v->SumOfHarmonicsIndex < LENGTH_OF_HARMONICS_ARRAY; v->SumOfHarmonicsIndex++)
+
+	// preveri, èe je uporabnik spremenil vrednost harmonika, njegovo amplitudo ali kompenzacijo faze
+	v->SumOfHarmonics = v->SumOfHarmonics + v->HarmonicsBuffer[v->HarmonicIndex];
+
+	// poveèaj indeks zaporednega harmonika
+	v->HarmonicIndex = v->HarmonicIndex + 1;
+
+	// èe indeks preraste obseg harmonikov,
+	if(v->HarmonicIndex >= LENGTH_OF_HARMONICS_ARRAY)
 	{
-		v->SumOfHarmonics = v->SumOfHarmonics + v->HarmonicsBuffer[v->SumOfHarmonicsIndex];
+		// zaznaj spremembe parametrov dvojnega DCT regulatorja s strani uporabnika, ki zahteva vnovièni izraèun koeficientov obeh DCT filtrov
+		if( (v->SumOfHarmonics != v->SumOfHarmonicsOld) || (v->k != v->k_old) )
+		{
+			// postavi zastavico in zaèni izraèun koeficientov
+			v->CoeffCalcInProgressFlag = 1;
+		}
+
+		// resetiraj indeks zaporednega harmonika
+		v->HarmonicIndex = 0;
+
+		// shranim vrednosti vektorjev (array-ev), ki bodo v naslednjem ciklu prejšnje vrednosti
+		v->SumOfHarmonicsOld = v->SumOfHarmonics;
+		v->k_old = v->k;
+
+		// poèisti akumulirane dele
+		v->SumOfHarmonics = 0;
 	}
 
-	// zaznavanje spremembe parametrov DCT regulatorja s strani uporabnika, ki zahteva vnovièni izraèun koeficientov DCT oz. FIR filtra.
-	if( (v->k != v->k_old) || (v->SumOfHarmonics != v->SumOfHarmonicsOld) )
-	{
-		v->CoeffCalcInProgressFlag = 1;
-		v->j = 0;
-	}
-
-	// izraèun koeficientov FIR oz. DCT filtra; vsako vzorèno periodo en koeficient
+	// izraèun koeficientov DCT filtra 1 in 2; vsako vzorèno periodo en koeficient (s prispevkom le enega harmonika)
 	if(v->CoeffCalcInProgressFlag != 0)
 	{
+		// calculate new coefficients
 		FIR_FILTER_COEFF_CALC(v);
 	}
-
-	
-	
-	
-	// zapis trenutnih vrednosti, ki bodo v naslednji iteraciji že zgodovina
-	v->k_old = v->k;
-	v->SumOfHarmonicsOld = v->SumOfHarmonics;
 
 
 
@@ -237,7 +249,8 @@ void DCT_REG_CALC (DCT_REG_float *v)
 
 
 /****************************************************************************************************
- * Izraèun koeficientov DCT filtra med delovanjem. V eni vzorèni periodi je izraèunan le en koeficient.
+ * Izraèun koeficientov DCT filtra med delovanjem. V eni vzorèni periodi je izraèunan
+ * le en koeficient za le en posamezni harmonik.
  * OPOMBA: Za izraèun vseh N koeficientov, je potrebnih N vzorènih period.
  * OPOMBA: FIR filter iz FPU knjižnice izvede konvolucijo le delno, ker ne obrne signala, zato ima
  *         kompenzacija zakasnitve ravno nasproten predznak.
@@ -245,31 +258,64 @@ void DCT_REG_CALC (DCT_REG_float *v)
 #pragma CODE_SECTION(FIR_FILTER_COEFF_CALC, "ramfuncs");
 void FIR_FILTER_COEFF_CALC (DCT_REG_float *v)
 {
-	int harmonic_index;
+	static int harmonic_index = 0;
+	static int cleared_coeff_flag = 0;
 
 
-	*(v->FIR_filter_float.coeff_ptr + v->j) = 0.0;
-	/* LAG COMPENSATION HAS NEGATIVE SIGN, BECAUSE OF REALIZATION OF DCT FILTER WITH FPU LIBRARY */
-	for(harmonic_index = 0; harmonic_index < LENGTH_OF_HARMONICS_ARRAY; harmonic_index++)
+	// before calculating the first harmonic contribution, clear the coefficient first
+	if(cleared_coeff_flag == 0)
 	{
+		*(v->FIR_filter_float.coeff_ptr + v->j) = 0.0;
+	}
+
+	// add the contribution of specific harmonic to the previous coefficient value
+
+	/* LAG COMPENSATION HAS NEGATIVE SIGN, BECAUSE OF REALIZATION OF DCT FILTER WITH FPU LIBRARY */
+	if(v->HarmonicsBuffer[harmonic_index] != 0)
+	{
+		/* LAG COMPENSATION HAS NEGATIVE SIGN, BECAUSE OF REALIZATION OF DCT FILTER WITH FPU LIBRARY */
 		if(v->HarmonicsBuffer[harmonic_index] != 0)
 		{
 			*(v->FIR_filter_float.coeff_ptr + v->j) = *(v->FIR_filter_float.coeff_ptr + v->j) + 	\
-					      2.0/(FIR_FILTER_NUMBER_OF_COEFF) *  										\
-					      cos( 2 * PI * v->HarmonicsBuffer[harmonic_index] * 						\
-						  ( (float)(v->j - v->k) ) / (FIR_FILTER_NUMBER_OF_COEFF) );				\
+					2.0/(FIR_FILTER_NUMBER_OF_COEFF) *  											\
+					cos( 2 * PI * v->HarmonicsBuffer[harmonic_index] * 								\
+							( (float)(v->j - v->k) ) / (FIR_FILTER_NUMBER_OF_COEFF) );				\
 		}
-
 	}
 	/* FIR FILTER FROM FPU LIBRARY DOESN'T FLIP SIGNAL FROM LEFT TO RIGHT WHILE PERFORMING CONVOLUTION */
 
+	// increment coefficient index
 	v->j = v->j + 1;
 
-    if(v->j >= FIR_FILTER_NUMBER_OF_COEFF)
-    {
-    	v->j = 0;
-    	v->CoeffCalcInProgressFlag = 0;
-    }
+	// if the last coefficient is calculated,
+	if(v->j >= FIR_FILTER_NUMBER_OF_COEFF)
+	{
+		// reset coefficient index
+		v->j = 0;
+
+		// increment harmonic index
+		harmonic_index = harmonic_index + 1;
+
+		// signalize that all the coefficients were already cleared,
+		// when calculating the first harmonic contribution
+		cleared_coeff_flag = 1;
+	}
+
+	// if all the harmonics have been taken into account, stop the calculation
+	if(harmonic_index >= LENGTH_OF_HARMONICS_ARRAY)
+	{
+		// reset the coefficient index
+		v->j = 0;
+
+		// reset the harmonic index
+		harmonic_index = 0;
+
+		// lower the flag and stop calculation of coefficients
+		v->CoeffCalcInProgressFlag = 0;
+
+		// reset the state machine counter
+		cleared_coeff_flag = 0;
+	}
 }
 
 

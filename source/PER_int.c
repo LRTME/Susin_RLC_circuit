@@ -47,14 +47,17 @@ long    	interrupt_cycles = 0;
 int     	interrupt_overflow_counter = 0;
 
 // variables for the control algorithm
-enum		{NONE, PI_only, PI_RES, PI_multi_RES, PI_REP, PI_DCT, PI_dual_DCT} select_controller = NONE;
+enum		{NONE, PI_only, PI_RES, PI_mRES, PI_REP, PI_DCT, PI_dual_DCT} select_controller = NONE;
 
 float   	reference = 0.0;
 float		angle_1Hz = 0.0;
 float		angle_periodic = 0.0;
 float		input_offset = 1.5;
 float		input_amplitude = 1.0;
-float		input_freq = 50.0;
+float		input_freq = SIG_FREQ;
+
+// crossover frequency, where phase of F0 reaches -180° and is limited to fs/10 = 2e3
+float		crossover_freq = SAMPLE_FREQ/10; // 2e3
 
 int 		clear_REP_buffer_index = 0;
 int 		clear_DCT_buffer_index = 0;
@@ -75,6 +78,7 @@ RES_REG_float 		voltage_RES_reg5 = RES_REG_FLOAT_DEFAULTS;
 REP_REG_float		voltage_REP_reg = REP_REG_FLOAT_DEFAULTS;
 DCT_REG_float		voltage_DCT_reg = DCT_REG_FLOAT_DEFAULTS;
 dual_DCT_REG_float	voltage_dual_DCT_reg = dual_DCT_REG_FLOAT_DEFAULTS;
+
 
 
 /* create (declare) delay buffer array for the use of FPU FIR filter struct library within tok_grid_dct_reg */
@@ -200,15 +204,29 @@ void interrupt PER_int(void)
     // PI controller
     if(select_controller != NONE)
     {
+//     	// ref: vlak pulzov
+//    	if(angle_periodic > 0.5)
+//    	{
+//    		voltage_PI_reg.Ref = input_offset + input_amplitude;
+//    	}
+//    	else
+//    	{
+//    		voltage_PI_reg.Ref = 0.0;
+//    	}
+
+    	// ref: sinus
 //    	voltage_PI_reg.Ref = input_offset + input_amplitude*sin(2*PI*input_freq*interrupt_cnt/SAMPLE_FREQ);
     	voltage_PI_reg.Ref = input_offset + input_amplitude*sin(2*PI*angle_periodic);
     	voltage_PI_reg.Fdb = voltage;
+
+
+
 
     	PI_FLOAT_CALC(voltage_PI_reg);
     }
 
     // RES controller
-    if(select_controller == PI_RES || select_controller == PI_multi_RES)
+    if(select_controller == PI_RES || select_controller == PI_mRES)
     {
     	voltage_RES_reg.Ref = voltage_PI_reg.Ref;
     	voltage_RES_reg2.Ref = voltage_PI_reg.Ref;
@@ -243,6 +261,7 @@ void interrupt PER_int(void)
 //    	voltage_RES_reg9.Angle = angle_periodic; // integral fiksne frekvence f = 50 Hz --> ker gre od 0 do 1
 //    	voltage_RES_reg10.Angle = angle_periodic; // integral fiksne frekvence f = 50 Hz --> ker gre od 0 do 1
 
+
     	RES_REG_CALC(voltage_RES_reg);
     	RES_REG_CALC(voltage_RES_reg2);
     	RES_REG_CALC(voltage_RES_reg3);
@@ -253,6 +272,7 @@ void interrupt PER_int(void)
 //    	RES_REG_CALC(voltage_RES_reg8);
 //    	RES_REG_CALC(voltage_RES_reg9);
 //    	RES_REG_CALC(voltage_RES_reg10);
+
 
     	multiple_res_reg_out = 	voltage_RES_reg.Out +   		\
 								voltage_RES_reg2.Out +			\
@@ -309,7 +329,7 @@ void interrupt PER_int(void)
     case PI_RES:
         duty = voltage_PI_reg.Out + voltage_RES_reg.Out;
         break;
-    case PI_multi_RES:
+    case PI_mRES:
         duty = voltage_PI_reg.Out + multiple_res_reg_out;
         break;
     case PI_REP:
@@ -594,8 +614,8 @@ void PER_int_setup(void)
     ****************************************/
 
     /* PI controller parameters initialization */
-    voltage_PI_reg.Kp = 2.0; // 1.0;	// 2.0;
-    voltage_PI_reg.Ki = 20.0/SAMPLE_FREQ; // 20.0/SAMPLE_FREQ;
+    voltage_PI_reg.Kp = 0.2; // 0.3 ali 0.2
+    voltage_PI_reg.Ki = 200.0/SAMPLE_FREQ; // 200.0/SAMPLE_FREQ;
     voltage_PI_reg.OutMax = 1.0;
     voltage_PI_reg.OutMin = 0.0;
 
@@ -610,16 +630,37 @@ void PER_int_setup(void)
 //    voltage_RES_reg8.Harmonic = 8;
 //    voltage_RES_reg9.Harmonic = 9;
 //    voltage_RES_reg10.Harmonic = 10;
-    voltage_RES_reg.Kres = 20.0/SAMPLE_FREQ; // 20.0/SAMPLE_FREQ;
-    voltage_RES_reg2.Kres = voltage_RES_reg.Kres;  	// 13.1/SAMP_FREQ
-    voltage_RES_reg3.Kres = voltage_RES_reg.Kres;  	// 13.1/SAMP_FREQ
-    voltage_RES_reg4.Kres = voltage_RES_reg.Kres;  	// 13.1/SAMP_FREQ
-    voltage_RES_reg5.Kres = voltage_RES_reg.Kres;  	// 13.1/SAMP_FREQ
-//    voltage_RES_reg6.Kres = voltage_RES_reg.Kres;  	// 13.1/SAMP_FREQ
-//    voltage_RES_reg7.Kres = voltage_RES_reg.Kres;  	// 13.1/SAMP_FREQ
-//    voltage_RES_reg8.Kres = voltage_RES_reg.Kres;  	// 13.1/SAMP_FREQ
-//    voltage_RES_reg9.Kres = voltage_RES_reg.Kres;  	// 13.1/SAMP_FREQ
-//    voltage_RES_reg10.Kres = voltage_RES_reg.Kres;  // 13.1/SAMP_FREQ
+    // Kres, ki delajo ob ustrezni fazni komp.:
+    // harmonik: 1   , 2   , 3   , 4   , 5
+    // Kres:     1e-2, 1e-2, 5e-3, 1e-3, /
+    voltage_RES_reg.Kres = voltage_PI_reg.Ki; 		// 200.0/SAMPLE_FREQ
+    voltage_RES_reg2.Kres = voltage_RES_reg.Kres * 												\
+    						(1.0 - (voltage_RES_reg2.Harmonic*input_freq / crossover_freq) * 	\
+    						(voltage_RES_reg2.Harmonic*input_freq / crossover_freq));
+    voltage_RES_reg3.Kres = voltage_RES_reg.Kres * 												\
+    						(1.0 - (voltage_RES_reg3.Harmonic*input_freq / crossover_freq) * 	\
+    						(voltage_RES_reg3.Harmonic*input_freq / crossover_freq));
+    voltage_RES_reg4.Kres = voltage_RES_reg.Kres * 												\
+    						(1.0 - (voltage_RES_reg4.Harmonic*input_freq / crossover_freq) * 	\
+    						(voltage_RES_reg4.Harmonic*input_freq / crossover_freq));
+    voltage_RES_reg5.Kres = voltage_RES_reg.Kres * 												\
+    						(1.0 - (voltage_RES_reg5.Harmonic*input_freq / crossover_freq) * 	\
+    						(voltage_RES_reg5.Harmonic*input_freq / crossover_freq));
+//    voltage_RES_reg6.Kres = voltage_RES_reg.Kres; // 200.0/SAMPLE_FREQ
+//    voltage_RES_reg7.Kres = voltage_RES_reg.Kres; // 200.0/SAMPLE_FREQ
+//    voltage_RES_reg8.Kres = voltage_RES_reg.Kres; // 200.0/SAMPLE_FREQ
+//    voltage_RES_reg9.Kres = voltage_RES_reg.Kres; // 200.0/SAMPLE_FREQ
+//    voltage_RES_reg10.Kres = voltage_RES_reg.Kres;	// 200.0/SAMPLE_FREQ
+	voltage_RES_reg.PhaseCompDeg = 5.0; // atan2(2*z_2_order*2*PI*1.0*input_freq*T_2_order,(1 - 2*PI*1.0*input_freq*T_2_order*2*PI*1.0*input_freq*T_2_order)) ne dela
+	voltage_RES_reg2.PhaseCompDeg = 10.0;
+	voltage_RES_reg3.PhaseCompDeg = 20.0;
+	voltage_RES_reg4.PhaseCompDeg = 30.0;
+	voltage_RES_reg5.PhaseCompDeg = 45.0;
+//    	voltage_RES_reg6.PhaseCompDeg = 0.0;
+//    	voltage_RES_reg7.PhaseCompDeg = 0.0;
+//    	voltage_RES_reg8.PhaseCompDeg = 0.0;
+//    	voltage_RES_reg9.PhaseCompDeg = 0.0;
+//    	voltage_RES_reg10.PhaseCompDeg = 0.0;
     voltage_RES_reg.OutMax = +0.5;	// +0.5; // zaradi varnosti ne gre do 0.99
     voltage_RES_reg2.OutMax = +0.5;	 // +0.5; // zaradi varnosti ne gre do 0.99
     voltage_RES_reg3.OutMax = +0.5;	 // +0.5; // zaradi varnosti ne gre do 0.99

@@ -101,7 +101,7 @@ void dual_DCT_REG_CALC (dual_DCT_REG_float *v)
 		v->SumOfLagCompensation = 0;
 	}
 
-	// izraèun koeficientov DCT filtra 2; vsako vzorèno periodo en koeficient (s prispevkom le enega harmonika)
+	// izraèun koeficientov DCT filtra 1 in 2; vsako vzorèno periodo en koeficient (s prispevkom le enega harmonika)
 	if(v->CoeffCalcInProgressFlag != 0)
 	{
 		// calculate new coefficients
