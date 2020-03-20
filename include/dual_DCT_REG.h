@@ -3,7 +3,7 @@
 * DESCRIPTION:  dual DCT controller (regulator) which is reducing periodic disturbance
 * AUTHOR:       Denis Sušin
 * START DATE:   28.8.2019
-* VERSION:      3.0
+* VERSION:      3.1
 *
 * CHANGES :
 * VERSION   	DATE		WHO					DETAIL
@@ -14,6 +14,7 @@
 *												because of FIR filter library
 * 3.0       	3.12.2019	Denis Sušin			Coefficient recalculation updated without using
 * 												for loop
+* 3.1       	19.3.2020	Denis Sušin			Amplitude implementation on both DCT filters
 *
 ****************************************************************/
 
@@ -36,12 +37,14 @@
 // harmonics selection at the beginning that passes through both DCT filters (i.e. "{1,5,7}" means that 1st, 5th and 7th harmonic passes through DCT filter, others are blocked)
 //#define		SELECTED_HARMONICS2				{1, 0, 0}
 #define		SELECTED_HARMONICS2					{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20}
-// amplitudes for each harmonic at the beginning
-//#define		AMPLITUDE_VALUES2				{1.0, 1.0, 1.0}
-#define		AMPLITUDE_VALUES2					{1.0, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01};
+// amplitudes for each harmonic of DCT filter 1 (in integrator) at the beginning
+//#define		AMPLITUDE_VALUES22				{1.0, 1.0, 1.0}
+#define		AMPLITUDE_VALUES21					{1.0, 1.0, 0.05, 0.01, 0.01,    0.01, 0.01, 0.01, 0.01, 0.01,    0.01, 0.01, 0.01, 0.01, 0.01,   0.01, 0.01, 0.01, 0.01, 0.01};
+// amplitudes for each harmonic of DCT filter 2 (at output) at the beginning
+#define		AMPLITUDE_VALUES22					AMPLITUDE_VALUES21
 // phase delay compensation values for each harmonic at the beginning
 //#define		PHASE_LAG_COMPENSATION_VALUES2	{0.0, 0.0, 0.0}
- #define		PHASE_LAG_COMPENSATION_VALUES2	{0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+ #define		PHASE_LAG_COMPENSATION_VALUES2	{5.0, 10.0, 20.0, 30.0, 40.0,    40.0, 45.0, 45.0, 45.0, 50.0,    60.0, 75.0, 85.0, 90.0, 110.0,    115.0, 120.0, 125.0, 130.0, 135.0};
 
 
 typedef struct dual_DCT_REG_FLOAT_STRUCT
@@ -66,14 +69,17 @@ typedef struct dual_DCT_REG_FLOAT_STRUCT
 	int   HarmonicIndex;			// Variable: Index of the for loop (to access each harmonic's element)
 	int   SumOfHarmonics;			// Variable: Sum of all elements of the "Harmonics"
 	int   SumOfHarmonicsOld;		// Variable: History of sum of all elements of the "Harmonics"
-	float SumOfAmplitudes;			// Variable: Sum of all elements of the amplitudes "A"
-	float SumOfAmplitudesOld;		// Variable: Sum of all elements of the amplitudes "A"
+	float SumOfAmplitudes1;			// Variable: Sum of all elements of the amplitudes "A1"
+	float SumOfAmplitudesOld1;		// Variable: Sum of all elements of the amplitudes "A1"
+	float SumOfAmplitudes2;			// Variable: Sum of all elements of the amplitudes "A2"
+	float SumOfAmplitudesOld2;		// Variable: Sum of all elements of the amplitudes "A2"
 	float SumOfLagCompensation;		// Variable: Sum of all elements of the phase delay compensation "fi_deg"
 	float SumOfLagCompensationOld;	// Variable: History of sum of all elements of the phase delay compensation "fi_deg"
 	int   CoeffCalcInProgressFlag;	// Variable: flag, indicating when the elements of the online FIR filter coefficient buffer are being calculated
     float Out;                      // Output: dual_DCT_REG output
     int	  HarmonicsBuffer[LENGTH_OF_HARMONICS_ARRAY2];	// Array of parameters: Selected harmonics that will pass through both DCT filters
-    float A[LENGTH_OF_HARMONICS_ARRAY2];				// Array of parameters: Amplitude of each selected harmonic
+    float A1[LENGTH_OF_HARMONICS_ARRAY2];				// Array of parameters: Amplitude of each selected harmonic
+    float A2[LENGTH_OF_HARMONICS_ARRAY2];				// Array of parameters: Amplitude of each selected harmonic
     float fi_deg[LENGTH_OF_HARMONICS_ARRAY2];			// Array of parameters: Phase delay compensation for each selected harmonic [deg]
 } dual_DCT_REG_float;
 
@@ -104,6 +110,8 @@ typedef struct dual_DCT_REG_FLOAT_STRUCT
 	0.0,      							\
 	0.0,      							\
 	0.0,      							\
+	0.0,      							\
+	0.0,      							\
 	0,      							\
 	0.0,      							\
 }
@@ -125,14 +133,16 @@ typedef struct dual_DCT_REG_FLOAT_STRUCT
 #define dual_DCT_REG_FIR_COEFF_INIT_MACRO(v)                												\
 {                                                       													\
 	int temp_array[LENGTH_OF_HARMONICS_ARRAY2] = SELECTED_HARMONICS2; 										\
-	float temp_array2[LENGTH_OF_HARMONICS_ARRAY2] = AMPLITUDE_VALUES2;										\
-	int temp_array3[LENGTH_OF_HARMONICS_ARRAY2] = PHASE_LAG_COMPENSATION_VALUES2;							\
+	float temp_array2[LENGTH_OF_HARMONICS_ARRAY2] = AMPLITUDE_VALUES21;										\
+	float temp_array3[LENGTH_OF_HARMONICS_ARRAY2] = AMPLITUDE_VALUES22;										\
+	int temp_array4[LENGTH_OF_HARMONICS_ARRAY2] = PHASE_LAG_COMPENSATION_VALUES2;							\
 																											\
 	for(v.i = 0; v.i < LENGTH_OF_HARMONICS_ARRAY2; v.i++)													\
 	{																										\
 		v.HarmonicsBuffer[v.i] =  temp_array[v.i];															\
-		v.A[v.i] =  temp_array2[v.i];																		\
-		v.fi_deg[v.i] =  temp_array3[v.i];																	\
+		v.A1[v.i] =  temp_array2[v.i];																		\
+		v.A2[v.i] =  temp_array3[v.i];																		\
+		v.fi_deg[v.i] =  temp_array4[v.i];																	\
 	}																										\
 	/* LAG COMPENSATION HAS NEGATIVE SIGN, BECAUSE OF REALIZATION OF DCT FILTER WITH FPU LIBRARY */			\
     for(v.j = 0; v.j < FIR_FILTER_NUMBER_OF_COEFF2; v.j++)   												\
@@ -145,12 +155,12 @@ typedef struct dual_DCT_REG_FLOAT_STRUCT
 			{																								\
         		*(v.FIR_filter_float1.coeff_ptr + v.j) = *(v.FIR_filter_float1.coeff_ptr + v.j) + 			\
 							 2.0/FIR_FILTER_NUMBER_OF_COEFF2 *  											\
-							 cos( 2.0 * PI * v.HarmonicsBuffer[v.i] * 										\
+							 v.A1[v.i] *cos( 2.0 * PI * v.HarmonicsBuffer[v.i] * 										\
 							 ( (float)(v.j) ) / (FIR_FILTER_NUMBER_OF_COEFF2) );							\
 							 	 	 	 	 	 	 	 	 	 	 	 	 	 	 	 	 	 	 	 	\
 				*(v.FIR_filter_float2.coeff_ptr + v.j) = *(v.FIR_filter_float2.coeff_ptr + v.j) + 			\
 							 2.0/FIR_FILTER_NUMBER_OF_COEFF2 *  											\
-							 v.A[v.i] * cos( 2.0 * PI * v.HarmonicsBuffer[v.i] * 							\
+							 v.A2[v.i] * cos( 2.0 * PI * v.HarmonicsBuffer[v.i] * 							\
 							 ( (float)(v.j) / (FIR_FILTER_NUMBER_OF_COEFF2) ) - 							\
 							 v.fi_deg[v.i] * PI/180.0);														\
 			}																								\

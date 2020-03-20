@@ -3,7 +3,7 @@
 * DESCRIPTION:  dual DCT controller (regulator) which is reducing periodic disturbance
 * AUTHOR:       Denis Sušin
 * START DATE:   28.8.2019
-* VERSION:      3.0
+* VERSION:      3.1
 *
 * CHANGES :
 * VERSION   	DATE		WHO					DETAIL
@@ -14,6 +14,7 @@
 *												because of FIR filter library
 * 3.0       	3.12.2019	Denis Sušin			Coefficient recalculation updated without using
 * 												for loop
+* 3.1       	19.3.2020	Denis Sušin			Amplitude implementation on both DCT filters
 *
 ****************************************************************/
 
@@ -71,7 +72,8 @@ void dual_DCT_REG_CALC (dual_DCT_REG_float *v)
 
 	// preveri, èe je uporabnik spremenil vrednost harmonika, njegovo amplitudo ali kompenzacijo faze
 	v->SumOfHarmonics = v->SumOfHarmonics + v->HarmonicsBuffer[v->HarmonicIndex];
-	v->SumOfAmplitudes = v->SumOfAmplitudes + v->A[v->HarmonicIndex];
+	v->SumOfAmplitudes1 = v->SumOfAmplitudes1 + v->A1[v->HarmonicIndex];
+	v->SumOfAmplitudes2 = v->SumOfAmplitudes2 + v->A2[v->HarmonicIndex];
 	v->SumOfLagCompensation = v->SumOfLagCompensation + v->fi_deg[v->HarmonicIndex];
 
 	// poveèaj indeks zaporednega harmonika
@@ -81,7 +83,7 @@ void dual_DCT_REG_CALC (dual_DCT_REG_float *v)
 	if(v->HarmonicIndex >= LENGTH_OF_HARMONICS_ARRAY2)
 	{
 		// zaznaj spremembe parametrov dvojnega DCT regulatorja s strani uporabnika, ki zahteva vnovièni izraèun koeficientov obeh DCT filtrov
-		if( (v->SumOfHarmonics != v->SumOfHarmonicsOld) || (v->SumOfAmplitudes != v->SumOfAmplitudesOld) || (v->SumOfLagCompensation != v->SumOfLagCompensationOld) )
+		if( (v->SumOfHarmonics != v->SumOfHarmonicsOld) || (v->SumOfAmplitudes1 != v->SumOfAmplitudesOld1) || (v->SumOfAmplitudes2 != v->SumOfAmplitudesOld2) || (v->SumOfLagCompensation != v->SumOfLagCompensationOld) )
 		{
 			// postavi zastavico in zaèni izraèun koeficientov
 			v->CoeffCalcInProgressFlag = 1;
@@ -92,12 +94,14 @@ void dual_DCT_REG_CALC (dual_DCT_REG_float *v)
 
 		// shranim vrednosti vektorjev (array-ev), ki bodo v naslednjem ciklu prejšnje vrednosti
 		v->SumOfHarmonicsOld = v->SumOfHarmonics;
-		v->SumOfAmplitudesOld = v->SumOfAmplitudes;
+		v->SumOfAmplitudesOld1 = v->SumOfAmplitudes1;
+		v->SumOfAmplitudesOld2 = v->SumOfAmplitudes2;
 		v->SumOfLagCompensationOld = v->SumOfLagCompensation;
 
 		// poèisti akumulirane dele
 		v->SumOfHarmonics = 0;
-		v->SumOfAmplitudes = 0.0;
+		v->SumOfAmplitudes1 = 0.0;
+		v->SumOfAmplitudes2 = 0.0;
 		v->SumOfLagCompensation = 0;
 	}
 
@@ -218,12 +222,12 @@ void FIR_FILTER_COEFF_CALC2 (dual_DCT_REG_float *v)
 	{
 		*(v->FIR_filter_float1.coeff_ptr + v->j) = *(v->FIR_filter_float1.coeff_ptr + v->j) + 		\
 				2.0/(FIR_FILTER_NUMBER_OF_COEFF2) *  												\
-				cos( 2.0 * PI * v->HarmonicsBuffer[harmonic_index] * 								\
+				v->A1[harmonic_index] * cos( 2.0 * PI * v->HarmonicsBuffer[harmonic_index] * 								\
 						( (float)(v->j) ) / (FIR_FILTER_NUMBER_OF_COEFF2) );
 
 		*(v->FIR_filter_float2.coeff_ptr + v->j) = *(v->FIR_filter_float2.coeff_ptr + v->j) + 		\
 				2.0/(FIR_FILTER_NUMBER_OF_COEFF2) *  												\
-				v->A[harmonic_index] * cos( 2.0 * PI * v->HarmonicsBuffer[harmonic_index] * 		\
+				v->A2[harmonic_index] * cos( 2.0 * PI * v->HarmonicsBuffer[harmonic_index] * 		\
 						( (float)(v->j) / (FIR_FILTER_NUMBER_OF_COEFF2) ) - 						\
 						v->fi_deg[harmonic_index] * PI/180.0);										\
 	}

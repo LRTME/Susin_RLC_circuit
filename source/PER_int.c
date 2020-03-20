@@ -615,7 +615,7 @@ void PER_int_setup(void)
 
     /* PI controller parameters initialization */
     voltage_PI_reg.Kp = 0.2; // 0.3 ali 0.2
-    voltage_PI_reg.Ki = 200.0/SAMPLE_FREQ; // 200.0/SAMPLE_FREQ;
+    voltage_PI_reg.Ki = 100.0/SAMPLE_FREQ; // 100.0/SAMPLE_FREQ ali 200.0/SAMPLE_FREQ
     voltage_PI_reg.OutMax = 1.0;
     voltage_PI_reg.OutMin = 0.0;
 
@@ -646,16 +646,21 @@ void PER_int_setup(void)
     voltage_RES_reg5.Kres = voltage_RES_reg.Kres * 												\
     						(1.0 - (voltage_RES_reg5.Harmonic*input_freq / crossover_freq) * 	\
     						(voltage_RES_reg5.Harmonic*input_freq / crossover_freq));
-//    voltage_RES_reg6.Kres = voltage_RES_reg.Kres; // 200.0/SAMPLE_FREQ
-//    voltage_RES_reg7.Kres = voltage_RES_reg.Kres; // 200.0/SAMPLE_FREQ
-//    voltage_RES_reg8.Kres = voltage_RES_reg.Kres; // 200.0/SAMPLE_FREQ
-//    voltage_RES_reg9.Kres = voltage_RES_reg.Kres; // 200.0/SAMPLE_FREQ
-//    voltage_RES_reg10.Kres = voltage_RES_reg.Kres;	// 200.0/SAMPLE_FREQ
+    voltage_RES_reg.Kres =  1.0 * voltage_PI_reg.Ki; // 100.0/SAMPLE_FREQ
+    voltage_RES_reg2.Kres = 1.0 * voltage_PI_reg.Ki; // 100.0/SAMPLE_FREQ
+    voltage_RES_reg3.Kres = 0.05 * voltage_PI_reg.Ki; // 100.0/SAMPLE_FREQ
+    voltage_RES_reg4.Kres = 0.01 * voltage_PI_reg.Ki; // 100.0/SAMPLE_FREQ
+    voltage_RES_reg5.Kres = 0.01 * voltage_PI_reg.Ki; // 100.0/SAMPLE_FREQ
+//    voltage_RES_reg6.Kres = voltage_RES_reg.Kres; // 100.0/SAMPLE_FREQ
+//    voltage_RES_reg7.Kres = voltage_RES_reg.Kres; // 100.0/SAMPLE_FREQ
+//    voltage_RES_reg8.Kres = voltage_RES_reg.Kres; // 100.0/SAMPLE_FREQ
+//    voltage_RES_reg9.Kres = voltage_RES_reg.Kres; // 100.0/SAMPLE_FREQ
+//    voltage_RES_reg10.Kres = voltage_RES_reg.Kres;	// 100.0/SAMPLE_FREQ
 	voltage_RES_reg.PhaseCompDeg = 5.0; // atan2(2*z_2_order*2*PI*1.0*input_freq*T_2_order,(1 - 2*PI*1.0*input_freq*T_2_order*2*PI*1.0*input_freq*T_2_order)) ne dela
 	voltage_RES_reg2.PhaseCompDeg = 10.0;
 	voltage_RES_reg3.PhaseCompDeg = 20.0;
 	voltage_RES_reg4.PhaseCompDeg = 30.0;
-	voltage_RES_reg5.PhaseCompDeg = 45.0;
+	voltage_RES_reg5.PhaseCompDeg = 40.0;
 //    	voltage_RES_reg6.PhaseCompDeg = 0.0;
 //    	voltage_RES_reg7.PhaseCompDeg = 0.0;
 //    	voltage_RES_reg8.PhaseCompDeg = 0.0;
@@ -686,8 +691,8 @@ void PER_int_setup(void)
     /* REPetitive controller parameters initialization */
     REP_REG_INIT_MACRO(voltage_REP_reg);
     voltage_REP_reg.BufferHistoryLength = SAMPLE_POINTS; // 400
-    voltage_REP_reg.Krep = 1/2.0 * (voltage_RES_reg.Kres*SAMPLE_FREQ) / (2.0*SIG_FREQ); // 1.0 = 1/2.0 * 20.0/(2.0*SIG_FREQ)
-    voltage_REP_reg.k = 0; // 5
+    voltage_REP_reg.Krep = 0.4 * 1/2.0 * (voltage_RES_reg.Kres*SAMPLE_FREQ) / (2.0*SIG_FREQ); // 1.0 = 0.2 * 1/2.0 * 200.0/(2.0*SIG_FREQ)
+    voltage_REP_reg.k = 10; // 10
     voltage_REP_reg.w0 = 0.2; // 0.2
     voltage_REP_reg.w1 = 0.2; // 0.2
     voltage_REP_reg.w2 = 0.2; // 0.2
@@ -714,8 +719,8 @@ void PER_int_setup(void)
 
     // initialize current DCT controller
     DCT_REG_INIT_MACRO(voltage_DCT_reg); // initialize all arrays
-    voltage_DCT_reg.Kdct = (voltage_RES_reg.Kres*SAMPLE_FREQ) / (4.0*SIG_FREQ); // 1.0 = 20.0/(4.0*SIG_FREQ)
-    voltage_DCT_reg.k = 0; // 5
+    voltage_DCT_reg.Kdct = 0.6 * (voltage_RES_reg.Kres*SAMPLE_FREQ) / (4.0*SIG_FREQ); // 0.3 = 0.3 * 200.0/(4.0*SIG_FREQ)
+    voltage_DCT_reg.k = 10; // 10
     voltage_DCT_reg.ErrSumMax = 0.6;
     voltage_DCT_reg.ErrSumMin = -0.6;
     voltage_DCT_reg.OutMax = 0.5; // 0.5
@@ -749,7 +754,7 @@ void PER_int_setup(void)
 
     // initialize current dual DCT controller
     dual_DCT_REG_INIT_MACRO(voltage_dual_DCT_reg); // initialize all variables and coefficients
-    voltage_dual_DCT_reg.Kdct = (voltage_RES_reg.Kres*SAMPLE_FREQ) / (4.0*SIG_FREQ); // 1.0 = 20.0/(4.0*SIG_FREQ)
+    voltage_dual_DCT_reg.Kdct = 1.0 * (voltage_RES_reg.Kres*SAMPLE_FREQ) / (4.0*SIG_FREQ); // 1.0 = 200.0/(4.0*SIG_FREQ)
     voltage_dual_DCT_reg.ErrSumMax = 10.0;
     voltage_dual_DCT_reg.ErrSumMin = -10.0;
     voltage_dual_DCT_reg.OutMax = 0.5; // 0.5
