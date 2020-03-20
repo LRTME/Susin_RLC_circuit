@@ -600,19 +600,19 @@ void PER_int_setup(void)
     dlog.trig = &angle_1Hz;
 
     // data signals
-//    dlog.iptr1 = &voltage_PI_reg.Ref;
-//    dlog.iptr2 = &voltage_PI_reg.Fdb;
-//    dlog.iptr3 = &voltage_PI_reg.Err;
-//    dlog.iptr4 = &voltage_PI_reg.Out;
-//    dlog.iptr5 = &angle_periodic;
-//    dlog.iptr6 = &voltage;
-//    dlog.iptr7 = &current;
-//    dlog.iptr8 = &current;
+    dlog.iptr1 = &voltage_PI_reg.Ref;
+    dlog.iptr2 = &voltage_PI_reg.Fdb;
+    dlog.iptr3 = &voltage_PI_reg.Err;
+    dlog.iptr4 = &voltage_PI_reg.Out;
+    dlog.iptr5 = &angle_periodic;
+    dlog.iptr6 = &voltage;
+    dlog.iptr7 = &current;
+    dlog.iptr8 = &current;
 
-    dlog.iptr1 = &voltage_PI_reg.Fdb;
-    dlog.iptr2 = &voltage_PI_reg.Err;
-
-    dlog.downsample_ratio = 5;
+//    dlog.iptr1 = &voltage_PI_reg.Fdb;
+//    dlog.iptr2 = &voltage_PI_reg.Err;
+//
+//    dlog.downsample_ratio = 5;
 
     /****************************************
     * Control algorithm initialization
