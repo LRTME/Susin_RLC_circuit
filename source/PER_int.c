@@ -600,14 +600,19 @@ void PER_int_setup(void)
     dlog.trig = &angle_1Hz;
 
     // data signals
-    dlog.iptr1 = &voltage_PI_reg.Ref;
-    dlog.iptr2 = &voltage_PI_reg.Fdb;
-    dlog.iptr3 = &voltage_PI_reg.Err;
-    dlog.iptr4 = &voltage_PI_reg.Out;
-    dlog.iptr5 = &angle_periodic;
-    dlog.iptr6 = &voltage;
-    dlog.iptr7 = &current;
-    dlog.iptr8 = &current;
+//    dlog.iptr1 = &voltage_PI_reg.Ref;
+//    dlog.iptr2 = &voltage_PI_reg.Fdb;
+//    dlog.iptr3 = &voltage_PI_reg.Err;
+//    dlog.iptr4 = &voltage_PI_reg.Out;
+//    dlog.iptr5 = &angle_periodic;
+//    dlog.iptr6 = &voltage;
+//    dlog.iptr7 = &current;
+//    dlog.iptr8 = &current;
+
+    dlog.iptr1 = &voltage_PI_reg.Fdb;
+    dlog.iptr2 = &voltage_PI_reg.Err;
+
+    dlog.downsample_ratio = 5;
 
     /****************************************
     * Control algorithm initialization
@@ -648,19 +653,24 @@ void PER_int_setup(void)
     						(voltage_RES_reg5.Harmonic*input_freq / crossover_freq));
     voltage_RES_reg.Kres =  1.0 * voltage_PI_reg.Ki; // 100.0/SAMPLE_FREQ
     voltage_RES_reg2.Kres = 1.0 * voltage_PI_reg.Ki; // 100.0/SAMPLE_FREQ
-    voltage_RES_reg3.Kres = 0.05 * voltage_PI_reg.Ki; // 100.0/SAMPLE_FREQ
-    voltage_RES_reg4.Kres = 0.01 * voltage_PI_reg.Ki; // 100.0/SAMPLE_FREQ
-    voltage_RES_reg5.Kres = 0.01 * voltage_PI_reg.Ki; // 100.0/SAMPLE_FREQ
+    voltage_RES_reg3.Kres = 0.1 * voltage_PI_reg.Ki; // 100.0/SAMPLE_FREQ
+    voltage_RES_reg4.Kres = 0.02 * voltage_PI_reg.Ki; // 100.0/SAMPLE_FREQ
+    voltage_RES_reg5.Kres = 0.02 * voltage_PI_reg.Ki; // 100.0/SAMPLE_FREQ
 //    voltage_RES_reg6.Kres = voltage_RES_reg.Kres; // 100.0/SAMPLE_FREQ
 //    voltage_RES_reg7.Kres = voltage_RES_reg.Kres; // 100.0/SAMPLE_FREQ
 //    voltage_RES_reg8.Kres = voltage_RES_reg.Kres; // 100.0/SAMPLE_FREQ
 //    voltage_RES_reg9.Kres = voltage_RES_reg.Kres; // 100.0/SAMPLE_FREQ
 //    voltage_RES_reg10.Kres = voltage_RES_reg.Kres;	// 100.0/SAMPLE_FREQ
-	voltage_RES_reg.PhaseCompDeg = 5.0; // atan2(2*z_2_order*2*PI*1.0*input_freq*T_2_order,(1 - 2*PI*1.0*input_freq*T_2_order*2*PI*1.0*input_freq*T_2_order)) ne dela
+	voltage_RES_reg.PhaseCompDeg = 5.0;
 	voltage_RES_reg2.PhaseCompDeg = 10.0;
 	voltage_RES_reg3.PhaseCompDeg = 20.0;
 	voltage_RES_reg4.PhaseCompDeg = 30.0;
 	voltage_RES_reg5.PhaseCompDeg = 40.0;
+//	voltage_RES_reg.PhaseCompDeg = atan2(2*z_2_order*2*PI*voltage_RES_reg.Harmonic*input_freq*T_2_order,  (1 - 2*PI*voltage_RES_reg.Harmonic*input_freq*T_2_order*2*PI*voltage_RES_reg.Harmonic*input_freq*T_2_order));
+//	voltage_RES_reg2.PhaseCompDeg = atan2(2*z_2_order*2*PI*voltage_RES_reg2.Harmonic*input_freq*T_2_order,(1 - 2*PI*voltage_RES_reg2.Harmonic*input_freq*T_2_order*2*PI*voltage_RES_reg2.Harmonic*input_freq*T_2_order));
+//	voltage_RES_reg3.PhaseCompDeg = atan2(2*z_2_order*2*PI*voltage_RES_reg3.Harmonic*input_freq*T_2_order,(1 - 2*PI*voltage_RES_reg3.Harmonic*input_freq*T_2_order*2*PI*voltage_RES_reg3.Harmonic*input_freq*T_2_order));
+//	voltage_RES_reg4.PhaseCompDeg = atan2(2*z_2_order*2*PI*voltage_RES_reg4.Harmonic*input_freq*T_2_order,(1 - 2*PI*voltage_RES_reg4.Harmonic*input_freq*T_2_order*2*PI*voltage_RES_reg4.Harmonic*input_freq*T_2_order));
+//	voltage_RES_reg5.PhaseCompDeg = atan2(2*z_2_order*2*PI*voltage_RES_reg5.Harmonic*input_freq*T_2_order,(1 - 2*PI*voltage_RES_reg5.Harmonic*input_freq*T_2_order*2*PI*voltage_RES_reg5.Harmonic*input_freq*T_2_order));
 //    	voltage_RES_reg6.PhaseCompDeg = 0.0;
 //    	voltage_RES_reg7.PhaseCompDeg = 0.0;
 //    	voltage_RES_reg8.PhaseCompDeg = 0.0;

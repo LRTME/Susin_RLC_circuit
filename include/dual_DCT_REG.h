@@ -39,7 +39,7 @@
 #define		SELECTED_HARMONICS2					{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20}
 // amplitudes for each harmonic of DCT filter 1 (in integrator) at the beginning
 //#define		AMPLITUDE_VALUES22				{1.0, 1.0, 1.0}
-#define		AMPLITUDE_VALUES21					{1.0, 1.0, 0.05, 0.01, 0.01,    0.01, 0.01, 0.01, 0.01, 0.01,    0.01, 0.01, 0.01, 0.01, 0.01,   0.01, 0.01, 0.01, 0.01, 0.01};
+#define		AMPLITUDE_VALUES21					{1.0, 1.0, 0.1, 0.02, 0.02,    0.01, 0.01, 0.01, 0.01, 0.01,    0.01, 0.01, 0.01, 0.01, 0.01,   0.01, 0.01, 0.01, 0.01, 0.01};
 // amplitudes for each harmonic of DCT filter 2 (at output) at the beginning
 #define		AMPLITUDE_VALUES22					AMPLITUDE_VALUES21
 // phase delay compensation values for each harmonic at the beginning
