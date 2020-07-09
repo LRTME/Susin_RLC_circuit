@@ -32,7 +32,7 @@ void BACK_loop(void)
         if (interrupt_cnt == 0)
         {
             PCB_LEDstick_toggle();
-            // wait for at least 100 us, in order prevent executing this code twice
+            // wait for at least 100 us, in order to prevent executing this code twice
             DELAY_US(100L);
         }
     }   // end of while(1)

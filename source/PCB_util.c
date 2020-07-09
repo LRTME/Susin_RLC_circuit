@@ -38,7 +38,7 @@ void PCB_LEDstick_toggle(void)
 **************************************************************/
 void PCB_load_on(void)
 {
-	GpioDataRegs.GPADAT.bit.GPIO1 = 1;
+	GpioDataRegs.GPADAT.bit.GPIO1 = 1; // force output high (5 V)
 }
 
 /**************************************************************
@@ -46,7 +46,7 @@ void PCB_load_on(void)
 **************************************************************/
 void PCB_load_off(void)
 {
-	GpioDataRegs.GPADAT.bit.GPIO1 = 0;
+	GpioDataRegs.GPADAT.bit.GPIO1 = 0; // force output low (0 V)
 }
 
 /**************************************************************
@@ -63,9 +63,9 @@ void PCB_init(void)
     GpioDataRegs.GPBDAT.bit.GPIO34 = 0;
 
     // LOAD
-    GpioCtrlRegs.GPAMUX1.bit.GPIO1 = 0;
-    GpioCtrlRegs.GPADIR.bit.GPIO1 = 1;
-    GpioDataRegs.GPADAT.bit.GPIO1 = 0;
+    GpioCtrlRegs.GPAMUX1.bit.GPIO1 = 0; // GPIO1 has GPIO function
+    GpioCtrlRegs.GPADIR.bit.GPIO1 = 1; // GPIO1 is output (set to 1)
+    GpioDataRegs.GPADAT.bit.GPIO1 = 0; // force output low (0 V)
 
     EDIS;
 

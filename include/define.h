@@ -35,7 +35,8 @@
 #define     PI              3.1415926535897932384626433832795
 
 // RLC circuit resistance [Ohm]
-#define		R_rlc			257.0 			// 102.2Ohm do 400 Hz, pri 400 Hz 257 Ohm, pri 1kHz že 745 Ohm
+#define		R_rlc			257.0 			// meritve nadomestne upornosti z RLC metrom: 102.2 Ohm pri DC, pri 400 Hz 257 Ohm,
+											// pri 1 kHz že 745 Ohm, pri èemer ima upor upornost R = 2.2 Ohm
 // RLC circuit inductance [H]
 #define		L_rlc			47e-3			// 47e-3
 // RLC circuit capacitance [F]

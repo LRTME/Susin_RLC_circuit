@@ -25,10 +25,10 @@ float   	duty = 0.0;
 // variables for reference value generation and load toggling
 bool		enable_load = FALSE;
 float   	load_counter = 0;
-float   	load_counter_prd = SAMPLE_FREQ;
-float   	load_counter_cmpr = 800;
-float   	load_counter_load_on = 350;
-float   	load_counter_load_off = 650;
+float   	load_counter_prd = SAMPLE_FREQ/SIG_FREQ;
+float   	load_counter_cmpr = 0.25*SAMPLE_FREQ;	 // 5000
+float   	load_counter_load_on = 0.0*SAMPLE_FREQ/SIG_FREQ;  // 0
+float   	load_counter_load_off = 0.05*SAMPLE_FREQ/SIG_FREQ; // 10000
 
 float   	load_value = 0;
 float   	load_value_high = 2.5;
@@ -597,7 +597,7 @@ void PER_int_setup(void)
     dlog.holdoff_time = 100;               
 
     // trigger signal
-    dlog.trig = &angle_1Hz;
+    dlog.trig = &angle_periodic; // za meritve uporabi signal napetosti "voltage" in vzorèno frekvenco 4kHz
 
     // data signals
     dlog.iptr1 = &voltage_PI_reg.Ref;
