@@ -35,19 +35,16 @@
 #define     PI              3.1415926535897932384626433832795
 
 // RLC circuit resistance [Ohm]
-#define		R_rlc			257.0 			// meritve nadomestne upornosti z RLC metrom: 102.2 Ohm pri DC, pri 400 Hz 257 Ohm,
-											// pri 1 kHz že 745 Ohm, pri èemer ima upor upornost R = 2.2 Ohm
+#define		R_rlc			259.2 			// meritve nadomestne upornosti z RLC metrom: 100 + 2.2 Ohm pri DC, pri 400 Hz 257 + 2.2 Ohm,
+											// pri 1 kHz že 745 + 2.2 Ohm, pri èemer ima upor upornost R = 2.2 Ohm
 // RLC circuit inductance [H]
 #define		L_rlc			47e-3			// 47e-3
 // RLC circuit capacitance [F]
 #define		C_rlc			3.3e-6			// 3.3e-6
 
-// second order gain
-#define		K_2_order			1.0
-// second order time constant
-#define		T_2_order			sqrt(L_rlc/R_rlc)
-// second order damping
-#define		z_2_order			R_rlc*C_rlc/(2*T_2_order)
+// second order gain 			K = 1.0
+// second order time constant 	T = sqrt(L_rlc/R_rlc)
+// second order damping			z = R_rlc*C_rlc/(2*T_2_order)
 
 // bool type definition
 typedef enum {FALSE = 0, TRUE} bool;

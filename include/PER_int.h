@@ -8,6 +8,7 @@
 #define     __PER_INT_H__
 
 #include    "DSP28x_Project.h"
+#include    "math.h"
 
 #include    "IQmathLib.h"
 #include    "define.h"

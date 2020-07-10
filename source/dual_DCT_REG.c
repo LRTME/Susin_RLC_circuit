@@ -222,7 +222,7 @@ void FIR_FILTER_COEFF_CALC2 (dual_DCT_REG_float *v)
 	{
 		*(v->FIR_filter_float1.coeff_ptr + v->j) = *(v->FIR_filter_float1.coeff_ptr + v->j) + 		\
 				2.0/(FIR_FILTER_NUMBER_OF_COEFF2) *  												\
-				v->A1[harmonic_index] * cos( 2.0 * PI * v->HarmonicsBuffer[harmonic_index] * 								\
+				v->A1[harmonic_index] * cos( 2.0 * PI * v->HarmonicsBuffer[harmonic_index] * 		\
 						( (float)(v->j) ) / (FIR_FILTER_NUMBER_OF_COEFF2) );
 
 		*(v->FIR_filter_float2.coeff_ptr + v->j) = *(v->FIR_filter_float2.coeff_ptr + v->j) + 		\

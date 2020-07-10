@@ -35,16 +35,18 @@
 // maximal length of harmonics array
 #define		LENGTH_OF_HARMONICS_ARRAY2			20
 // harmonics selection at the beginning that passes through both DCT filters (i.e. "{1,5,7}" means that 1st, 5th and 7th harmonic passes through DCT filter, others are blocked)
-//#define		SELECTED_HARMONICS2				{1, 0, 0}
+//#define		SELECTED_HARMONICS2				{1, 0, 0};
 #define		SELECTED_HARMONICS2					{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20}
 // amplitudes for each harmonic of DCT filter 1 (in integrator) at the beginning
-//#define		AMPLITUDE_VALUES22				{1.0, 1.0, 1.0}
-#define		AMPLITUDE_VALUES21					{1.0, 1.0, 0.1, 0.02, 0.02,    0.01, 0.01, 0.01, 0.01, 0.01,    0.01, 0.01, 0.01, 0.01, 0.01,   0.01, 0.01, 0.01, 0.01, 0.01};
+//#define		AMPLITUDE_VALUES21				{1.0, 1.0, 1.0};
+#define		AMPLITUDE_VALUES21					{1.0, 1.0, 1.0, 1.0, 1.0,    1.0, 1.0, 1.0, 1.0, 1.0,    1.0, 1.0, 1.0, 1.0, 1.0,   1.0, 1.0, 1.0, 1.0, 1.0}; // v stacionarnem stanju deluje
+
 // amplitudes for each harmonic of DCT filter 2 (at output) at the beginning
-#define		AMPLITUDE_VALUES22					AMPLITUDE_VALUES21
+//#define		AMPLITUDE_VALUES22					AMPLITUDE_VALUES21
+#define		AMPLITUDE_VALUES22					{1.0, 0.50, 0.50, 0.50, 0.50,    0.25, 0.25, 0.25, 0.25, 0.25,    0.25, 0.25, 0.25, 0.25, 0.25,   0.25, 0.25, 0.25, 0.25, 0.25};// v stacionarnem stanju deluje
 // phase delay compensation values for each harmonic at the beginning
-//#define		PHASE_LAG_COMPENSATION_VALUES2	{0.0, 0.0, 0.0}
- #define		PHASE_LAG_COMPENSATION_VALUES2	{5.0, 10.0, 20.0, 30.0, 40.0,    40.0, 45.0, 45.0, 45.0, 50.0,    60.0, 75.0, 85.0, 90.0, 110.0,    115.0, 120.0, 125.0, 130.0, 135.0};
+//#define		PHASE_LAG_COMPENSATION_VALUES2	{0.0, 0.0, 0.0};
+#define		PHASE_LAG_COMPENSATION_VALUES2		{04.0, 29.8, 43.1, 54.9, 65.3,    74.4, 82.4, 89.5, 95.7, 101.2,   106.1, 110.5, 114.4, 118.0, 121.2,    124.2, 126.9, 129.3, 131.6, 133.6};
 
 
 typedef struct dual_DCT_REG_FLOAT_STRUCT

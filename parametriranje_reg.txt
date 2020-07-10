@@ -1,0 +1,167 @@
+Eksperimentalno parametriranje mRES,REP,DCT in dDCT regulatorjev, ki delujejo stabilno.
+
+Sistem:
+RLC vezje
+10.3.2020 je bila zamenjana dušilka L. Za izbran primer veljajo naslednje vrednosti:
+
+Rdc = 2.2 + 100 Ohm; meritev R + Rdušilke pri DC toku
+Rac = 2.2 + 257 Ohm; meritev R + Rdušilke z RLC-metrom pri 400 Hz
+Rac2 = 2.2 + 745 Ohm; meritev R + Rdušilke z RLC-metrom pri 1 kHz
+
+R = 2.2 + 257 Ohm
+L = 47 mH 
+C = 3.3 uF
+
+
+Če RLC vezje modeliramo kot člen 2. reda (ko reguliramo napetost na C) dobimo naslednje parametre (Rdušilke zanemarjena):
+
+K = 1
+T = 393 us (fmejna = 404 Hz)
+z = 0.428
+
+
+Če RLC vezje modeliramo kot člen 2. reda (ko reguliramo napetost na C) dobimo naslednje parametre (Rdušilke upoštevana):
+
+K = 1
+T = 393 us (fmejna = 404 Hz)
+z = 1.086
+
+
+
+
+Pri parametriranju regulatorjev moramo upoštevati AC upornost. To pomeni, da kot model pri parametriranju uporabimo 
+člen 2. reda s parametri K = 1; T = 393 us (fmejna = 404 Hz); z = 1.086. 
+Na podlagi tega modela nastavljamo kompenzacijo zakasnitve za posamezno harmonsko komponento. 
+Poudariti velja, da je pri osnovni harmonski komponenti (50 Hz) izračun faznega kota s tem modelom prevelik (-15°).
+Za ostale višjeharmonske komponente je izračun faznega kota po tem modelu dovolj dober, da je regulacija stabilna.
+Če je kompenzacija zakasnitve dvojnega DCT regulatorja za prvo harmonsko komponento nastavljena na 15°, je regulacija nestabilna.
+Zato je kompenzacija zakasnitve za osnovno harmonsko komponento nastavljena na 4°, kar da stabilen odziv dvojnega DCT regulatorja.
+
+Fazni kot RLC vezja pri posameznih frekvencah:
+ frekvenca | harmonik |    fi_deg_model
+    50     |    1     |     15.3
+    100    |   	2     |     29.8
+    150    |   	3     |     43.1
+    200    |   	4     |     55.0
+    250    |   	5     |     65.3
+    300    |    6     |     74.4
+    350    |   	7     |     82.4
+    400    |   	8     |     89.5
+    450    |   	9     |     95.7
+    500    |   	10    |     101.2
+    550    |   	11    |     106.1
+    600    |   	12    |     110.5
+    650    |   	13    |     114.4
+    700    |   	14    |     118.0
+    750    |   	15    |     121.2
+    800    |   	16    |     124.2
+    850    |   	17    |     126.9
+    900    |   	18    |     129.3
+    950    |   	19    |     131.6
+    1000   |   	20    |     133.6
+
+
+
+
+Dodana je še obremenitev kondenzatorske napetosti RLC vezja z uporom, ki ima upornost 1 kOhm.
+
+
+
+
+Parametriranje PI reg. na skočno spremembo reference:
+
+SAMPLE_FREQ = 20e3;
+Kp = 0.2;
+Ki = 100.0/SAMPLE_FREQ;
+
+časovni potek Err pri referenci "offset + sinus": od -0.5 do 0.5.
+
+
+
+
+Parametriranje mRES reg. pri referenci "offset + sinus" (5 RES reg. naenkrat):
+
+f1 = 50 Hz
+Kres1 = 5e-3 = 100.0/SAMPLE_FREQ
+
+Stabilen odziv za naslednje parametre:
+harmonik |   Kres    | fi_deg_model | fi_comp_deg
+     1   | 1.0 * Ki  |    15.3      |   4.0
+	 2   | 0.5 * Ki  |    29.8      |   29.8
+	 3   | 0.5 * Ki  |    43.1      |   43.1 
+	 4   | 0.5 * Ki  |    55.0      |   55.0
+	 5   | 0.5 * Ki  |    65.3      |   65.3
+	 6   | 0.25 * Ki |    74.4      |   74.4
+	 7   | 0.25 * Ki |    82.4      |   82.4 
+	 8   | 0.25 * Ki |    89.5      |   89.5
+
+
+
+časovni potek Err[V]: od -5e-2 do 5e-2.
+
+
+
+
+Parametriranje REP reg. pri referenci "offset + sinus" (5 RES reg. naenkrat):
+
+f1 = 50 Hz
+Krep = 0.2 (pri 0.25 nestabilen); // Krep = 0.4 * 1/2.0 * (Kres1*SAMPLE_FREQ) / (2.0*f1)
+krep = 10
+w0 = 0.2
+w1 = 0.2
+w2 = 0.2
+
+časovni potek Err[V]: od -7e-3 do 7e-3.
+
+
+
+
+Parametriranje DCT reg. pri referenci "offset + sinus" (5 RES reg. naenkrat), prvih 20 harmonikov:
+
+f1 = 50 Hz
+Kdct = 0.3 (pri 0.35 nestabilen); // Kdct = 0.6 * (Kres1*SAMPLE_FREQ) / (4.0*f1)
+kdct = 10
+
+časovni potek Err[V]: od -7e-3 do 7e-3.
+
+
+
+
+Parametriranje dvojnega DCT reg. pri referenci "offset + sinus" (5 RES reg. naenkrat), prvih 20 harmonikov:
+
+f1 = 50 Hz
+Kddct = 0.5 (pri 1.5 nestabilen); // Kddct = 1.0 * (Kres1*SAMPLE_FREQ) / (4.0*f1)
+
+harmonik |  A1  |  A2  | fi_deg_model | fi_comp_deg
+     1   |  1.0 | 1.0  |    15.3      |   4.0
+	 2   |  1.0 | 0.50 |    29.8      |   29.8
+	 3   |  1.0 | 0.50 |    43.1      |   43.1
+	 4   |  1.0 | 0.25 |    55.0      |   55.0
+	 5   |  1.0 | 0.25 |    65.3      |   65.3
+	 6   |  1.0 | 0.25 |    74.4      |   74.4
+	 7   |  1.0 | 0.25 |    82.4      |   82.4 	 
+	 8   |  1.0 | 0.25 |    89.5      |   89.5
+	 9   |  1.0 | 0.25 |    95.7      |   95.7
+	10   |  1.0 | 0.25 |    101.2     |   101.2
+	11   |  1.0 | 0.25 |    106.1     |   106.1
+	12   |  1.0 | 0.25 |    110.5     |   110.5
+	13   |  1.0 | 0.25 |    114.4     |   114.4
+	14   |  1.0 | 0.25 |    118.0     |   118.0
+	15   |  1.0 | 0.25 |    121.2     |   121.2
+	16   |  1.0 | 0.25 |    124.2     |   124.2	
+	17   |  1.0 | 0.25 |    126.9     |   126.9
+	18   |  1.0 | 0.25 |    129.3     |   129.3	
+	19   |  1.0 | 0.25 |    131.6     |   131.6
+	20   |  1.0 | 0.25 |    133.6     |   133.6
+
+
+časovni potek Err[V]: od -7e-3 do 7e-3.
+
+
+Transient pri zgornjih parametrih:
+
+RES: 150 ms ???
+mRES: 150 ms ???
+REP: 350 ms ???
+DCT: 400 ms ???
+dDCT: 300 ms ???
