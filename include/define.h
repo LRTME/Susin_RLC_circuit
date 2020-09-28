@@ -34,13 +34,16 @@
 #define     ZSQRT2          0.70710678118654752440084436210485
 #define     PI              3.1415926535897932384626433832795
 
+// shunt resistor resistance in series with choke [Ohm]
+#define		SHUNT_RESISTOR	2.2
+
 // RLC circuit resistance [Ohm]
-#define		R_rlc			259.2 			// meritve nadomestne upornosti z RLC metrom: 100 + 2.2 Ohm pri DC, pri 400 Hz 257 + 2.2 Ohm,
-											// pri 1 kHz že 745 + 2.2 Ohm, pri èemer ima upor upornost R = 2.2 Ohm
+#define		R_rlc			6 				// meritve nadomestne upornosti dušilke z RLC metrom: 4.8 + 2.2 Ohm pri DC,
+											// pri 1 kHz 4.8 + 2.2 Ohm, pri èemer ima upor upornost R = 2.2 Ohm
 // RLC circuit inductance [H]
-#define		L_rlc			47e-3			// 47e-3
+#define		L_rlc			5e-3			// 5e-3
 // RLC circuit capacitance [F]
-#define		C_rlc			3.3e-6			// 3.3e-6
+#define		C_rlc			22e-6			// 3.3e-6
 
 // second order gain 			K = 1.0
 // second order time constant 	T = sqrt(L_rlc/R_rlc)

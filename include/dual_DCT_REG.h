@@ -39,15 +39,17 @@
 #define		SELECTED_HARMONICS2					{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20}
 // amplitudes for each harmonic of DCT filter 1 (in integrator) at the beginning
 //#define		AMPLITUDE_VALUES21				{1.0, 1.0, 1.0};
+//#define		AMPLITUDE_VALUES21					{1.0, 0.95, 0.95, 0.95, 0.95,    0.95, 0.95, 0.95, 0.95, 0.95,    0.95, 0.95, 0.95, 0.95, 0.95,   0.95, 0.95, 0.95, 0.95, 0.95};
 #define		AMPLITUDE_VALUES21					{1.0, 1.0, 1.0, 1.0, 1.0,    1.0, 1.0, 1.0, 1.0, 1.0,    1.0, 1.0, 1.0, 1.0, 1.0,   1.0, 1.0, 1.0, 1.0, 1.0}; // v stacionarnem stanju deluje
+
 
 // amplitudes for each harmonic of DCT filter 2 (at output) at the beginning
 //#define		AMPLITUDE_VALUES22					AMPLITUDE_VALUES21
 #define		AMPLITUDE_VALUES22					{1.0, 0.50, 0.50, 0.50, 0.50,    0.25, 0.25, 0.25, 0.25, 0.25,    0.25, 0.25, 0.25, 0.25, 0.25,   0.25, 0.25, 0.25, 0.25, 0.25};// v stacionarnem stanju deluje
 // phase delay compensation values for each harmonic at the beginning
-//#define		PHASE_LAG_COMPENSATION_VALUES2	{0.0, 0.0, 0.0};
-#define		PHASE_LAG_COMPENSATION_VALUES2		{04.0, 29.8, 43.1, 54.9, 65.3,    74.4, 82.4, 89.5, 95.7, 101.2,   106.1, 110.5, 114.4, 118.0, 121.2,    124.2, 126.9, 129.3, 131.6, 133.6};
-
+// #define		PHASE_LAG_COMPENSATION_VALUES2		{0.0, 0.0, 0.0};
+// #define		PHASE_LAG_COMPENSATION_VALUES2		{04.0, 29.8, 43.1, 54.9, 65.3,    74.4, 82.4, 89.5, 95.7, 101.2,   106.1, 110.5, 114.4, 118.0, 121.2,    124.2, 126.9, 129.3, 131.6, 133.6};
+#define		PHASE_LAG_COMPENSATION_VALUES2		{2.4, 5.0, 7.9, 11.4, 15.9, 22.2, 31.8, 47.4, 72.1, 101.7, 124.5, 138.5, 147.1, 152.8, 156.7, 159.5, 161.7, 163.5, 164.9, 166.1};
 
 typedef struct dual_DCT_REG_FLOAT_STRUCT
 {

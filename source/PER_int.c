@@ -16,19 +16,20 @@ float   	voltage = 0.0;
 // variables required for current measurement
 long    	current_raw = 0;
 long    	current_offset = 2048;
-float   	current_gain = (3.3/4096) * (1.0/50.0) * (1.0/R_rlc); // 12-bit ADC and 3.3V supply; INA213 gain = 50; R = 2.2 Ohm
+float   	current_gain = (3.3/4096) * (1.0/50.0) * (1.0/SHUNT_RESISTOR); // 12-bit ADC and 3.3V supply; INA213 gain = 50; Rshunt = 2.2 Ohm
 float   	current = 0.0;
 
 // duty cycle
 float   	duty = 0.0;
+bool		duty_cleared_flag = FALSE;
 
 // variables for reference value generation and load toggling
 bool		enable_load = FALSE;
 float   	load_counter = 0;
 float   	load_counter_prd = SAMPLE_FREQ/SIG_FREQ;
 float   	load_counter_cmpr = 0.25*SAMPLE_FREQ;	 // 5000
-float   	load_counter_load_on = 0.0*SAMPLE_FREQ/SIG_FREQ;  // 0
-float   	load_counter_load_off = 0.05*SAMPLE_FREQ/SIG_FREQ; // 10000
+float   	load_counter_load_on = 0.25*SAMPLE_FREQ/SIG_FREQ;  // 0
+float   	load_counter_load_off = 0.30*SAMPLE_FREQ/SIG_FREQ; // 10000
 
 float   	load_value = 0;
 float   	load_value_high = 2.5;
@@ -48,6 +49,7 @@ int     	interrupt_overflow_counter = 0;
 
 // variables for the control algorithm
 enum		{NONE, PI_only, PI_RES, PI_mRES, PI_REP, PI_DCT, PI_dual_DCT} select_controller = NONE;
+enum		{SINE, SQUARE} select_reference = SINE;
 
 float   	reference = 0.0;
 float		angle_1Hz = 0.0;
@@ -55,6 +57,10 @@ float		angle_periodic = 0.0;
 float		input_offset = 1.5;
 float		input_amplitude = 1.0;
 float		input_freq = SIG_FREQ;
+
+int			harmonic = 10;
+float		angle_periodic_harm = 0.0;
+float 		input_amplitude_harm = 0.0;
 
 // crossover frequency, where phase of F0 reaches -180° and is limited to fs/10 = 2e3
 float		crossover_freq = SAMPLE_FREQ/10; // 2e3
@@ -205,28 +211,53 @@ void interrupt PER_int(void)
     	angle_periodic = angle_periodic + 1.0;
     }
 
+    // calculate angle of h-th harmonic, which is changing its value in region [0,1)
+    angle_periodic_harm = angle_periodic_harm + harmonic*input_freq * 1.0/SAMPLE_FREQ;
+    if (angle_periodic_harm > 1.0)
+    {
+    	angle_periodic_harm = angle_periodic_harm - 1.0;
+    }
+    if (angle_periodic_harm < 0.0)
+    {
+    	angle_periodic_harm = angle_periodic_harm + 1.0;
+    }
+
     // PI controller
     if(select_controller != NONE)
     {
-//     	// ref: vlak pulzov
-//    	if(angle_periodic > 0.5)
-//    	{
-//    		voltage_PI_reg.Ref = input_offset + input_amplitude;
-//    	}
-//    	else
-//    	{
-//    		voltage_PI_reg.Ref = 0.0;
-//    	}
+    	// Voltage reference
+    	// If voltage reference is a train of square pulses,
+    	if(select_reference == SQUARE)
+    	{
+    		// ref: vlak pulzov
+    		if(angle_periodic > 0.5)
+    		{
+    			voltage_PI_reg.Ref = input_offset + input_amplitude;
+    		}
+    		else
+    		{
+    			voltage_PI_reg.Ref = 0.0;
+    		}
+    	}
+    	// If reference is a offset + sinus,
+    	else
+    	{
+    		// ref: sinus
+    		//    	voltage_PI_reg.Ref = input_offset + input_amplitude*sin(2*PI*input_freq*interrupt_cnt/SAMPLE_FREQ);
+//    		voltage_PI_reg.Ref = input_offset + input_amplitude*sin(2*PI*angle_periodic);
+    		voltage_PI_reg.Ref = input_offset + input_amplitude*sin(2*PI*angle_periodic) + \
+    				                            input_amplitude_harm*sin(2*PI*angle_periodic_harm);
+    	}
 
-    	// ref: sinus
-//    	voltage_PI_reg.Ref = input_offset + input_amplitude*sin(2*PI*input_freq*interrupt_cnt/SAMPLE_FREQ);
-    	voltage_PI_reg.Ref = input_offset + input_amplitude*sin(2*PI*angle_periodic);
+    	// Voltage feedback
     	voltage_PI_reg.Fdb = voltage;
 
 
 
-
     	PI_FLOAT_CALC(voltage_PI_reg);
+
+    	// flag for duty being cleared
+    	duty_cleared_flag = FALSE;
     }
 
     // RES controller
@@ -468,6 +499,17 @@ void get_electrical(void)
 **************************************************************/
 void clear_controllers(void)
 {
+	// When controller is not selected,
+	if(duty_cleared_flag == FALSE)
+	{
+		// clear duty just once
+		duty = 0.0;
+	}
+
+	// set flag for duty being set to 0
+	duty_cleared_flag = TRUE;
+
+
 	// clear all integral parts of controllers
     voltage_PI_reg.Ui = 0.0;
 
@@ -594,7 +636,7 @@ void PER_int_setup(void)
     // store every  sample
     dlog.downsample_ratio = 5;
     // Normal trigger mode
-    dlog.mode = Normal;                    
+    dlog.mode = Normal; // Normal or Single
     // number of calls to update function
     dlog.auto_time = 100;                  
     // number of calls to update function
@@ -615,7 +657,7 @@ void PER_int_setup(void)
 
     dlog.iptr1 = &voltage; // &voltage or &voltage_PI_reg.Fdb
     dlog.iptr2 = &voltage_PI_reg.Err;
-//
+
 //    dlog.downsample_ratio = 5;
 
     /****************************************
@@ -627,8 +669,8 @@ void PER_int_setup(void)
 	z_2_order = R_rlc*C_rlc/(2*T_2_order);
 
     /* PI controller parameters initialization */
-    voltage_PI_reg.Kp = 0.2; // 0.3 ali 0.2
-    voltage_PI_reg.Ki = 100.0/SAMPLE_FREQ; // 100.0/SAMPLE_FREQ
+    voltage_PI_reg.Kp = 0.1; // 0.1;
+    voltage_PI_reg.Ki = 50.0/SAMPLE_FREQ; // 50.0/SAMPLE_FREQ
     voltage_PI_reg.OutMax = 1.0;
     voltage_PI_reg.OutMin = 0.0;
 
@@ -670,18 +712,17 @@ void PER_int_setup(void)
     // Kres, ki delujejo ob ustrezni fazni komp.:
     // harmonik: 1,    2,    3,    4,    5,    6,    7,    8
     // Kres:    [1.0,  0.5,  0.5,  0.5  0.5,   x,    x,    x ] * voltage_PI_reg.Ki
-    voltage_RES_reg.Kres =  1.0 * voltage_PI_reg.Ki; // 1.0 * 100.0/SAMPLE_FREQ
-    voltage_RES_reg2.Kres = 0.5 * voltage_PI_reg.Ki; // 0.5 * 100.0/SAMPLE_FREQ
-    voltage_RES_reg3.Kres = 0.5 * voltage_PI_reg.Ki; // 0.5 * 100.0/SAMPLE_FREQ
-    voltage_RES_reg4.Kres = 0.5 * voltage_PI_reg.Ki; // 0.5 * 100.0/SAMPLE_FREQ
-    voltage_RES_reg5.Kres = 0.5 * voltage_PI_reg.Ki; // 0.5 * 100.0/SAMPLE_FREQ
-    voltage_RES_reg6.Kres = 0.25 * voltage_PI_reg.Ki; // 0.5 * 100.0/SAMPLE_FREQ
-    voltage_RES_reg7.Kres = 0.25 * voltage_PI_reg.Ki; // 0.5 * 100.0/SAMPLE_FREQ
-    voltage_RES_reg8.Kres = 0.25 * voltage_PI_reg.Ki; // 0.5 * 100.0/SAMPLE_FREQ
-    //    voltage_RES_reg9.Kres = 0.0 * voltage_PI_reg.Ki; // 0.0 * 100.0/SAMPLE_FREQ
-    //    voltage_RES_reg10.Kres = 0.0 * voltage_PI_reg.Ki; // 0.0 * 100.0/SAMPLE_FREQ
-//    voltage_RES_reg.PhaseCompDeg = atan2(2*z_2_order*(2*PI*voltage_RES_reg.Harmonic*input_freq)*T_2_order,  (1 - (2*PI*voltage_RES_reg.Harmonic*input_freq)*T_2_order * (2*PI*voltage_RES_reg.Harmonic*input_freq)*T_2_order)) * 180.0/PI;
-    voltage_RES_reg.PhaseCompDeg = 4.0;
+    voltage_RES_reg.Kres =  1.00 * voltage_PI_reg.Ki; // 1.00 * 50.0/SAMPLE_FREQ
+    voltage_RES_reg2.Kres = 0.50 * voltage_PI_reg.Ki; // 0.50 * 50.0/SAMPLE_FREQ
+    voltage_RES_reg3.Kres = 0.50 * voltage_PI_reg.Ki; // 0.50 * 50.0/SAMPLE_FREQ
+    voltage_RES_reg4.Kres = 0.50 * voltage_PI_reg.Ki; // 0.50 * 50.0/SAMPLE_FREQ
+    voltage_RES_reg5.Kres = 0.50 * voltage_PI_reg.Ki; // 0.50 * 50.0/SAMPLE_FREQ
+    voltage_RES_reg6.Kres = 0.25 * voltage_PI_reg.Ki; // 0.25 * 50.0/SAMPLE_FREQ
+    voltage_RES_reg7.Kres = 0.25 * voltage_PI_reg.Ki; // 0.25 * 50.0/SAMPLE_FREQ
+    voltage_RES_reg8.Kres = 0.25 * voltage_PI_reg.Ki; // 0.25 * 50.0/SAMPLE_FREQ
+    // voltage_RES_reg9.Kres = 0.0 * voltage_PI_reg.Ki; // 0.0 * 50.0/SAMPLE_FREQ
+    // voltage_RES_reg10.Kres = 0.0 * voltage_PI_reg.Ki; // 0.0 * 50.0/SAMPLE_FREQ
+    voltage_RES_reg.PhaseCompDeg = atan2(2*z_2_order*(2*PI*voltage_RES_reg.Harmonic*input_freq)*T_2_order,  (1 - (2*PI*voltage_RES_reg.Harmonic*input_freq)*T_2_order * (2*PI*voltage_RES_reg.Harmonic*input_freq)*T_2_order)) * 180.0/PI;
 	voltage_RES_reg2.PhaseCompDeg = atan2(2*z_2_order*(2*PI*voltage_RES_reg2.Harmonic*input_freq)*T_2_order,(1 - (2*PI*voltage_RES_reg2.Harmonic*input_freq)*T_2_order * (2*PI*voltage_RES_reg2.Harmonic*input_freq)*T_2_order)) * 180.0/PI;
 	voltage_RES_reg3.PhaseCompDeg = atan2(2*z_2_order*(2*PI*voltage_RES_reg3.Harmonic*input_freq)*T_2_order,(1 - (2*PI*voltage_RES_reg3.Harmonic*input_freq)*T_2_order * (2*PI*voltage_RES_reg3.Harmonic*input_freq)*T_2_order)) * 180.0/PI;
 	voltage_RES_reg4.PhaseCompDeg = atan2(2*z_2_order*(2*PI*voltage_RES_reg4.Harmonic*input_freq)*T_2_order,(1 - (2*PI*voltage_RES_reg4.Harmonic*input_freq)*T_2_order * (2*PI*voltage_RES_reg4.Harmonic*input_freq)*T_2_order)) * 180.0/PI;
@@ -716,8 +757,8 @@ void PER_int_setup(void)
     /* REPetitive controller parameters initialization */
     REP_REG_INIT_MACRO(voltage_REP_reg);
     voltage_REP_reg.BufferHistoryLength = SAMPLE_POINTS; // 400
-    voltage_REP_reg.Krep = 0.4 * 1/2.0 * (voltage_RES_reg.Kres*SAMPLE_FREQ) / (2.0*SIG_FREQ); // 0.2 = 0.4 * 1/2.0 * 100.0/(2.0*SIG_FREQ)
-    voltage_REP_reg.k = 10; // 10
+    voltage_REP_reg.Krep = 0.6 * 1/2.0 * (voltage_RES_reg.Kres*SAMPLE_FREQ) / (2.0*SIG_FREQ); // 0.15 = 0.6 * 1/2.0 * 50.0/(2.0*SIG_FREQ)
+    voltage_REP_reg.k = 9; // 10
     voltage_REP_reg.w0 = 0.2; // 0.2
     voltage_REP_reg.w1 = 0.2; // 0.2
     voltage_REP_reg.w2 = 0.2; // 0.2
@@ -744,8 +785,8 @@ void PER_int_setup(void)
 
     // initialize current DCT controller
     DCT_REG_INIT_MACRO(voltage_DCT_reg); // initialize all arrays
-    voltage_DCT_reg.Kdct = 0.6 * (voltage_RES_reg.Kres*SAMPLE_FREQ) / (4.0*SIG_FREQ); // 0.3 = 0.6 * 100.0/(4.0*SIG_FREQ)
-    voltage_DCT_reg.k = 10; // 10
+    voltage_DCT_reg.Kdct = 0.6 * (voltage_RES_reg.Kres*SAMPLE_FREQ) / (4.0*SIG_FREQ); // 0.15 = 0.6 * 50.0/(4.0*SIG_FREQ)
+    voltage_DCT_reg.k = 8; // 10
     voltage_DCT_reg.ErrSumMax = 0.6;
     voltage_DCT_reg.ErrSumMin = -0.6;
     voltage_DCT_reg.OutMax = 0.5; // 0.5
@@ -779,7 +820,7 @@ void PER_int_setup(void)
 
     // initialize current dual DCT controller
     dual_DCT_REG_INIT_MACRO(voltage_dual_DCT_reg); // initialize all variables and coefficients
-    voltage_dual_DCT_reg.Kdct = 1.0 * (voltage_RES_reg.Kres*SAMPLE_FREQ) / (4.0*SIG_FREQ); // 0.5 = 1.0 * 100.0/(4.0*SIG_FREQ)
+    voltage_dual_DCT_reg.Kdct = 1.0 * (voltage_RES_reg.Kres*SAMPLE_FREQ) / (4.0*SIG_FREQ); // 0.25 = 1.0 * 50.0/(4.0*SIG_FREQ)
     voltage_dual_DCT_reg.ErrSumMax = 10.0;
     voltage_dual_DCT_reg.ErrSumMin = -10.0;
     voltage_dual_DCT_reg.OutMax = 0.5; // 0.5
